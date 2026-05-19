@@ -131,9 +131,14 @@ export function validateRefrigerant(
           `${ref.name} transcrítico: T_evap CO₂ ≈ ${T_evap_co2} °C (${evapMarginK.toFixed(1)} K bajo T_crit). Fuente calor agua ${T_evap_refrig.toFixed(1)} °C ✓`
         );
       }
-      if (marginK < 3) {
+      if (marginK < 0) {
+        // Transcrítico: T_cond > T_crit por diseño. El margen negativo es esperado.
         warnings.push(
-          `${ref.name} transcrítico: margen de ${marginK.toFixed(1)} K sobre T_crit en el gas cooler. Riesgo de degradación del COP en verano.`
+          `${ref.name} transcrítico: T_cond efectiva (${T_cond_refrig.toFixed(1)} °C) supera T_crit (${ref.T_crit_C} °C) por ${Math.abs(marginK).toFixed(1)} K. Operación supercrítica confirmada — diseño 2025BC.`
+        );
+      } else if (marginK < 3) {
+        warnings.push(
+          `${ref.name} transcrítico: margen de solo ${marginK.toFixed(1)} K sobre T_crit. Monitorear degradación del COP en picos de carga.`
         );
       }
     }

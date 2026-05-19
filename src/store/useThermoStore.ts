@@ -23,7 +23,7 @@ function computeState(params: ThermoParams, refrigerant: string): ThermoState {
     const validation = validateRefrigerant(
       refrigerant,
       params.T_c2,
-      params.T_piscina_out,
+      params.T_piscina_in, // Fuente de calor del evaporador = agua de ENTRADA
       params.copOperativo
     );
     return { params, result, refrigerant, refrigerantValidation: validation };
