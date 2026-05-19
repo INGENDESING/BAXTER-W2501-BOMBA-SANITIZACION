@@ -4,7 +4,9 @@ import { calcularBalance, DEFAULT_THERMO_PARAMS } from "../../shared/thermo/bala
 import { validateRefrigerant } from "../../shared/thermo/refrigerants";
 
 interface ThermoStore extends ThermoState {
+  setT_c1: (t: number) => void;
   setDeltaTCaliente: (deltaT: number) => void;
+  setT_piscina_in: (t: number) => void;
   setTempSalidaPiscina: (t: number) => void;
   setCOP: (cop: number) => void;
   setRefrigerant: (name: string) => void;
@@ -50,10 +52,25 @@ const initial = computeState(structuredClone(DEFAULT_THERMO_PARAMS), "R744");
 export const useThermoStore = create<ThermoStore>()((set, get) => ({
   ...initial,
 
+  /** Cambia temperatura de entrada WFI (Tanque 7). Mantiene ΔT constante. */
+  setT_c1: (t) =>
+    set((state) => {
+      const deltaT = state.params.T_c2 - state.params.T_c1;
+      const params = { ...state.params, T_c1: t, T_c2: t + deltaT };
+      return computeState(params, state.refrigerant);
+    }),
+
   /** Cambia ΔT del lado caliente; T_c1 permanece fija */
   setDeltaTCaliente: (deltaT) =>
     set((state) => {
       const params = { ...state.params, T_c2: state.params.T_c1 + deltaT };
+      return computeState(params, state.refrigerant);
+    }),
+
+  /** Cambia temperatura de entrada de piscina al evaporador */
+  setT_piscina_in: (t) =>
+    set((state) => {
+      const params = { ...state.params, T_piscina_in: t };
       return computeState(params, state.refrigerant);
     }),
 

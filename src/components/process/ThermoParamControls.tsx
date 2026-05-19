@@ -60,7 +60,9 @@ export default function ThermoParamControls() {
     params,
     result,
     refrigerantValidation,
+    setT_c1,
     setDeltaTCaliente,
+    setT_piscina_in,
     setTempSalidaPiscina,
     setCOP,
     togglePerdidas,
@@ -98,6 +100,23 @@ export default function ThermoParamControls() {
       <RefrigerantSelector />
 
       <div className="space-y-5">
+        {/* T entrada WFI (Tanque 7) */}
+        <Slider
+          label="T entrada WFI (Tanque 7)"
+          value={params.T_c1}
+          min={60}
+          max={85}
+          step={0.1}
+          suffix=" °C"
+          onChange={setT_c1}
+          hint={`T entrada del lado caliente. ΔT se mantiene constante (${deltaT_caliente.toFixed(1)} K) → T salida = ${params.T_c2.toFixed(1)} °C`}
+        />
+        {params.T_c2 > 95 && (
+          <div className="rounded-lg border border-[#F0883E]/30 bg-[#F0883E]/10 px-3 py-2 text-xs text-[#F0883E]">
+            ⚠️ T salida = {params.T_c2.toFixed(1)} °C excede el límite recomendado de 95 °C para sistemas WFI (USP ‹1231›). Reduzca T entrada o ΔT.
+          </div>
+        )}
+
         {/* ΔT lado caliente */}
         <Slider
           label="ΔT lado caliente (C2 − C1)"
@@ -110,6 +129,28 @@ export default function ThermoParamControls() {
           hint={`T entrada = ${params.T_c1} °C → T salida = ${params.T_c2.toFixed(1)} °C · Caudal = ${result.volFlow_sanitizacion_m3h.toFixed(2)} m³/h`}
         />
 
+        {/* T entrada piscina */}
+        <Slider
+          label="T entrada piscina (evaporador)"
+          value={params.T_piscina_in}
+          min={20}
+          max={35}
+          step={0.1}
+          suffix=" °C"
+          onChange={setT_piscina_in}
+          hint={`T ambiente/piscina. Variación estacional Cali: 20–35 °C · Q_evap = ${result.Q_evap_kw.toFixed(1)} kW`}
+        />
+        {params.T_piscina_in <= params.T_piscina_out + 0.5 && (
+          <div className="rounded-lg border border-[#F85149]/30 bg-[#F85149]/10 px-3 py-2 text-xs text-[#F85149]">
+            ❌ T entrada piscina ({params.T_piscina_in.toFixed(1)} °C) debe ser mayor que T salida ({params.T_piscina_out.toFixed(1)} °C). El evaporador no puede extraer calor con ΔT ≤ 0.
+          </div>
+        )}
+        {result.volFlow_piscina_m3h === 0 && params.T_piscina_in > params.T_piscina_out && (
+          <div className="rounded-lg border border-[#F85149]/30 bg-[#F85149]/10 px-3 py-2 text-xs text-[#F85149]">
+            ❌ Caudal piscina calculado = 0. ΔT demasiado pequeño para la carga evaporador disponible.
+          </div>
+        )}
+
         {/* Temperatura salida piscina */}
         <Slider
           label="T salida agua piscina (evaporador)"
@@ -119,7 +160,7 @@ export default function ThermoParamControls() {
           step={0.1}
           suffix=" °C"
           onChange={setTempSalidaPiscina}
-          hint={`T entrada = ${params.T_piscina_in} °C → T salida = ${params.T_piscina_out.toFixed(1)} °C · Caudal = ${result.volFlow_piscina_m3h.toFixed(2)} m³/h · Q_evap = ${result.Q_evap_kw.toFixed(1)} kW · Circuito cerrado piscina`}
+          hint={`T entrada = ${params.T_piscina_in} °C → T salida = ${params.T_piscina_out.toFixed(1)} °C · Caudal = ${result.volFlow_piscina_m3h.toFixed(2)} m³/h · Circuito cerrado piscina`}
         />
 
         {/* COP */}
