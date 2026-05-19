@@ -49,10 +49,10 @@ export default function ProcessDiagram() {
   const [hovered, setHovered] = useState<string | null>(null);
   const [tooltip, setTooltip] = useState<{ x: number; y: number; content: string; placement: "left" | "right" } | null>(null);
 
-  const s1 = result.streams[0]; // C1: WFI Tanque 7 → Gas Cooler (75°C)
-  const s2 = result.streams[1]; // C2: Gas Cooler → Distribución sanitización (90°C)
-  const s_p1 = result.streams[2]; // P1: Piscina → Evaporador (28.9°C)
-  const s_p2 = result.streams[3]; // P2: Evaporador → Retorno piscina (15°C)
+  const s1 = result.streams[0]; // C1: WFI Tanque 7 → Gas Cooler
+  const s2 = result.streams[1]; // C2: Gas Cooler → Distribución sanitización
+  const s_p1 = result.streams[2]; // P1: Piscina → Evaporador
+  const s_p2 = result.streams[3]; // P2: Evaporador → Retorno piscina
 
   const handleMouseEnter = (e: React.MouseEvent, content: string) => {
     setHovered(content);
@@ -234,8 +234,8 @@ export default function ProcessDiagram() {
         <ellipse
           cx={bc.x + bc.w / 2}
           cy={bc.y + bc.h / 2}
-          rx={70}
-          ry={80}
+          rx={60}
+          ry={70}
           fill="none"
           stroke="#F0883E"
           strokeWidth="1.5"
@@ -408,7 +408,7 @@ export default function ProcessDiagram() {
         {/* Subtítulo condiciones */}
         <g transform={`translate(${W / 2}, ${H - 28})`}>
           <SvgText x={0} y={0} fill="#8B949E" fontWeight={400} fontSize={10}>
-            Escenario Simultaneidad 2 · Q_diseño = {params.Q_diseño_kw.toFixed(0)} kW · COP = {params.copOperativo} · Altitud {params.altitud_msnm} msnm · P_atm {result.P_atm_bar.toFixed(3)} bar · Cierre energía {result.energyClosurePct.toFixed(4)} %
+            Q_diseño = {params.Q_diseño_kw.toFixed(0)} kW · COP = {params.copOperativo} · Altitud {params.altitud_msnm} msnm · P_atm {result.P_atm_bar.toFixed(3)} bar · Cerradura caudales {result.energyClosurePct.toFixed(4)} % · Cerradura global {result.globalEnergyClosurePct.toFixed(4)} %
           </SvgText>
         </g>
       </svg>

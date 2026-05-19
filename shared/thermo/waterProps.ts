@@ -3,6 +3,10 @@
 // Método: tabla de lookup IAPWS-IF97 + interpolación lineal
 // Rango válido: 15–100 °C, presiones 0,5–2,0 bar(a)
 // Error estimado vs IAPWS-IF97 exacto: < 0,05 %
+//
+// NOTA: Para líquido subenfriado a baja presión, el efecto de P en h, cp,
+// rho es < 0,01 % en el rango 0,5–2,0 bar(a) (IAPWS-IF97, Region 1).
+// Se desprecia en esta implementación simplificada.
 // ───────────────────────────────────────────────────────────────
 
 import type { WaterProps } from "./types";
@@ -72,7 +76,14 @@ export function calcAtmPressure(altitud_msnm: number): number {
   return P_kPa / 100.0; // convertir a bar
 }
 
-/** Propiedades termodinámicas del agua líquida a T y P_g */
+/** Propiedades termodinámicas del agua líquida a T y P_g
+ *
+ * El efecto de la presión manométrica en las propiedades del líquido
+ * subenfriado se desprecia (< 0,01 % vs IAPWS-IF97 exacto) en el rango
+ * de operación de este proyecto (P_abs ≈ 0,9 bar(a)).
+ *
+ * @returns WaterProps con flag wasClamped si T_C quedó fuera de 15–100 °C.
+ */
 export function waterProps(T_C: number, P_g_bar: number, altitud_msnm: number): WaterProps {
   const P_atm_bar = calcAtmPressure(altitud_msnm);
   const P_abs_bar = P_atm_bar + P_g_bar;
@@ -80,7 +91,7 @@ export function waterProps(T_C: number, P_g_bar: number, altitud_msnm: number): 
   const interp = interpolate(T_C);
 
   return {
-    T_C,
+    T_C: interp.wasClamped ? (T_C > 100 ? 100 : 15) : T_C,
     P_bar: P_abs_bar,
     rho: interp.rho,
     mu_cP: interp.mu_mPas, // 1 mPa·s = 1 cP para agua

@@ -2,7 +2,7 @@
 // Motor de cálculo — Balance de Materia y Energía 2025BC
 // Proceso: Circuitos abiertos independientes
 //   Lado caliente: Tanque 7 (75°C) → Gas Cooler CO₂ → 90°C → Consumo sanitización
-//   Lado frío:     Piscina (28.9°C) → Evaporador CO₂ → 15°C → Descarte/recirculación
+//   Lado frío:     Piscina (28.9°C) → Evaporador CO₂ → 15°C → Retorno a piscina
 // Fuente: 2025BC-DT002 R0 (IAPWS-IF97) — validado
 // ───────────────────────────────────────────────────────────────
 
@@ -56,12 +56,11 @@ export function calcularBalance(params: ThermoParams): BalanceResult {
 
   // ── 6. PÉRDIDAS TÉRMICAS DEL TANQUE ──
   const Q_perdidas_kw = params.incluirPerdidas ? params.Q_perdidas_kw : 0;
-  const Q_disp_kw = Q_cond_kw;
-  const W_comp_disp_kw = W_comp_kw;
-  const COP_disp = COP_calc;
+  // Calor útil disponible para el proceso (descontando pérdidas del tanque)
+  const Q_disp_kw = Q_cond_kw - Q_perdidas_kw;
 
   // ── 7. CIERRE DE BALANCES ──
-  const massClosurePct = 0.0;
+  // Cierre interno: verifica que los caudales calculados reproduzcan Q_cond y Q_evap
   const Q_cond_from_streams = M_caliente * (p2.h - p1.h) / 3600;
   const Q_evap_from_streams = M_piscina * (p_p1.h - p_p2.h) / 3600;
   const energyClosurePct =
@@ -69,6 +68,12 @@ export function calcularBalance(params: ThermoParams): BalanceResult {
       Math.abs(Q_cond_kw - Q_cond_from_streams) / (Q_cond_kw || 1),
       Math.abs(Q_evap_kw - Q_evap_from_streams) / (Q_evap_kw || 1)
     ) * 100;
+
+  // Cierre global (Primera Ley): Q_cond debe ser igual a Q_evap + W_comp
+  const globalEnergyClosurePct =
+    Q_cond_kw > 0
+      ? (Math.abs(Q_cond_kw - (Q_evap_kw + W_comp_kw)) / Q_cond_kw) * 100
+      : 0;
 
   // ── 8. MÉTRICAS DE REFRIGERACIÓN ──
   const TR_evap = Q_evap_kw / KW_PER_TR;
@@ -79,11 +84,26 @@ export function calcularBalance(params: ThermoParams): BalanceResult {
   const costo_chiller_equiv_usd_año = W_chiller_equiv_kw * HORAS_AÑO * PRECIO_ELEC_USD_KWH;
   const ahorro_vs_chiller_usd_año = costo_chiller_equiv_usd_año - costo_bc_refrig_usd_año;
 
-  // ── 9. CONSTRUIR CORRIENTES ──
+  // ── 9. ADVERTENCIAS POR CLAMPING DE TEMPERATURA ──
+  const warnings: string[] = [];
+  if (p1.wasClamped) {
+    warnings.push(`C1: T = ${params.T_c1.toFixed(1)} °C fuera de rango 15–100 °C; propiedades calculadas a 15 °C o 100 °C.`);
+  }
+  if (p2.wasClamped) {
+    warnings.push(`C2: T = ${params.T_c2.toFixed(1)} °C fuera de rango 15–100 °C; propiedades calculadas a 15 °C o 100 °C.`);
+  }
+  if (p_p1.wasClamped) {
+    warnings.push(`P1: T = ${params.T_piscina_in.toFixed(1)} °C fuera de rango 15–100 °C; propiedades calculadas a 15 °C o 100 °C.`);
+  }
+  if (p_p2.wasClamped) {
+    warnings.push(`P2: T = ${params.T_piscina_out.toFixed(1)} °C fuera de rango 15–100 °C; propiedades calculadas a 15 °C o 100 °C.`);
+  }
+
+  // ── 10. CONSTRUIR CORRIENTES ──
   const streams: Stream[] = [
     {
       name: "C1",
-      description: "Tanque 7 → Gas Cooler CO₂ (WFI entrada 75°C)",
+      description: `Tanque 7 → Gas Cooler CO₂ (WFI entrada ${params.T_c1.toFixed(1)}°C)`,
       T_C: params.T_c1,
       P_g_bar: params.P_g_caliente,
       volFlow: V_caliente,
@@ -93,7 +113,7 @@ export function calcularBalance(params: ThermoParams): BalanceResult {
     },
     {
       name: "C2",
-      description: "Gas Cooler CO₂ → Distribución Sanitización (WFI salida 90°C, consumo)",
+      description: `Gas Cooler CO₂ → Distribución Sanitización (WFI salida ${params.T_c2.toFixed(1)}°C, consumo)`,
       T_C: params.T_c2,
       P_g_bar: params.P_g_caliente,
       volFlow: V_caliente,
@@ -103,7 +123,7 @@ export function calcularBalance(params: ThermoParams): BalanceResult {
     },
     {
       name: "P1",
-      description: "Piscina → Evaporador CO₂ (entrada 28.9°C)",
+      description: `Piscina → Evaporador CO₂ (entrada ${params.T_piscina_in.toFixed(1)}°C)`,
       T_C: params.T_piscina_in,
       P_g_bar: params.P_g_frio,
       volFlow: V_piscina,
@@ -113,7 +133,7 @@ export function calcularBalance(params: ThermoParams): BalanceResult {
     },
     {
       name: "P2",
-      description: "Evaporador CO₂ → Retorno piscina (15°C)",
+      description: `Evaporador CO₂ → Retorno piscina (${params.T_piscina_out.toFixed(1)}°C)`,
       T_C: params.T_piscina_out,
       P_g_bar: params.P_g_frio,
       volFlow: V_piscina,
@@ -131,10 +151,8 @@ export function calcularBalance(params: ThermoParams): BalanceResult {
     COP_calc,
     Q_perdidas_kw,
     Q_disp_kw,
-    W_comp_disp_kw,
-    COP_disp,
-    massClosurePct,
     energyClosurePct,
+    globalEnergyClosurePct,
     P_atm_bar,
     TR_evap,
     kw_per_TR,
@@ -143,13 +161,14 @@ export function calcularBalance(params: ThermoParams): BalanceResult {
     ahorro_vs_chiller_usd_año,
     volFlow_sanitizacion_m3h: V_caliente,
     volFlow_piscina_m3h: V_piscina,
+    warnings,
   };
 }
 
 /** Parámetros por defecto del balance — 2025BC (Simultaneidad 2)
  *
  * Lado caliente: Tanque 7 (75°C) → Gas Cooler CO₂ → 90°C → Consumo sanitización
- * Lado frío: Piscina (28.9°C) → Evaporador CO₂ → 15°C → Descarte/recirculación
+ * Lado frío: Piscina (28.9°C) → Evaporador CO₂ → 15°C → Retorno a piscina
  * Q_diseño = 490 kW → Q_evap = 327 kW (COP = 3.0)
  * Caudal piscina calculado: ṁ = 327 / (4.186 × 13.9) ≈ 5.62 kg/s ≈ 20.2 m³/h
  * Altitud Cali: 1.018 msnm (2025BC-DT002 Cuadro 1)

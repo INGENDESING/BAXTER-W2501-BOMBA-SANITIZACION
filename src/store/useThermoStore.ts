@@ -26,7 +26,12 @@ function computeState(params: ThermoParams, refrigerant: string): ThermoState {
       params.T_piscina_in, // Fuente de calor del evaporador = agua de ENTRADA
       params.copOperativo
     );
-    return { params, result, refrigerant, refrigerantValidation: validation };
+    // Combinar warnings del motor (clamping, etc.) con warnings de validación de refrigerante
+    const combinedValidation = {
+      ...validation,
+      warnings: [...result.warnings, ...validation.warnings],
+    };
+    return { params, result, refrigerant, refrigerantValidation: combinedValidation };
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error("Error en motor termodinámico:", err);

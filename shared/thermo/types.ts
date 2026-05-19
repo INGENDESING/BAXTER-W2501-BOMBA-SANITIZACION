@@ -35,11 +35,9 @@ export interface BalanceResult {
   W_comp_kw: number;      // Potencia eléctrica del compresor [kW]
   COP_calc: number;       // COP calculado [-]
   Q_perdidas_kw: number;  // Pérdidas térmicas del tanque [kW]
-  Q_disp_kw: number;      // Potencia térmica disponible (incl. pérdidas) [kW]
-  W_comp_disp_kw: number; // Potencia eléctrica incluyendo pérdidas [kW]
-  COP_disp: number;       // COP disponible (incl. pérdidas) [-]
-  massClosurePct: number; // Error de cierre de masa [%]
-  energyClosurePct: number; // Error de cierre de energía [%]
+  Q_disp_kw: number;      // Potencia térmica útil neta (Q_cond − pérdidas) [kW]
+  energyClosurePct: number; // Error de cierre de energía (caudales vs Q) [%]
+  globalEnergyClosurePct: number; // Error de cierre global (1.ª Ley) [%]
   P_atm_bar: number;      // Presión atmosférica calculada [bar(a)]
   // ── Métricas de refrigeración ──
   TR_evap: number;        // Toneladas de refrigeración del evaporador [TR]
@@ -50,6 +48,8 @@ export interface BalanceResult {
   // ── Caudales calculados ──
   volFlow_sanitizacion_m3h: number; // Caudal lado caliente [m³/h]
   volFlow_piscina_m3h: number;     // Caudal lado frío [m³/h]
+  // ── Advertencias del motor ──
+  warnings: string[];              // Warnings generados por el motor (clamping, etc.)
 }
 
 /** Parámetros de entrada para el cálculo del balance */

@@ -7,10 +7,10 @@ function fmt(v: number, d: number = 1) {
 export default function BalanceTable() {
   const { result, params } = useThermoStore();
 
-  const s1 = result.streams[0]; // C1: WFI Tanque 7 → Gas Cooler (75°C)
-  const s2 = result.streams[1]; // C2: Gas Cooler → Distribución sanitización (90°C)
-  const s_p1 = result.streams[2]; // P1: Piscina → Evaporador (28.9°C)
-  const s_p2 = result.streams[3]; // P2: Evaporador → Salida fría (15°C)
+  const s1 = result.streams[0]; // C1: WFI Tanque 7 → Gas Cooler
+  const s2 = result.streams[1]; // C2: Gas Cooler → Distribución sanitización
+  const s_p1 = result.streams[2]; // P1: Piscina → Evaporador
+  const s_p2 = result.streams[3]; // P2: Evaporador → Retorno piscina
 
   return (
     <div className="space-y-6">
@@ -117,7 +117,7 @@ export default function BalanceTable() {
               <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s_p2.props.k, 3)} W/m·K</td>
             </tr>
             <tr className="bg-[#0D1117]/40">
-              <td className="px-3 py-2 text-[#8B949E]">Calor sensible (q)</td>
+              <td className="px-3 py-2 text-[#8B949E]">Flujo de entalpía (M·h)</td>
               <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s1.heatFlow, 2)} kW</td>
               <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s2.heatFlow, 2)} kW</td>
               <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s_p1.heatFlow, 2)} kW</td>
@@ -158,7 +158,8 @@ export default function BalanceTable() {
         )}
         <div className="mt-3 text-xs text-[#8B949E]">
           Q<sub>cond</sub> = Q<sub>evap</sub> + W<sub>comp</sub> &nbsp;|&nbsp;
-          Cerradura: <span className="font-semibold text-[#3FB950]">{fmt(result.energyClosurePct, 4)} %</span>
+          Cerradura caudales: <span className="font-semibold text-[#3FB950]">{fmt(result.energyClosurePct, 4)} %</span>
+          &nbsp;|&nbsp; Cerradura global (1.ª Ley): <span className="font-semibold text-[#3FB950]">{fmt(result.globalEnergyClosurePct, 4)} %</span>
         </div>
       </div>
 
