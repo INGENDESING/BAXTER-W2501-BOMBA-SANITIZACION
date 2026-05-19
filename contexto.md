@@ -2,7 +2,7 @@
 
 ## Estado actual
 
-- **Última tarea completada:** Corrección modelo termodinámico — dos circuitos abiertos independientes (2026-05-19).
+- **Última tarea completada:** Auditoría termodinámica nivel maestría — Balance M&E + diagrama de proceso (2026-05-19, commit `d492578`).
 - **Próxima tarea pendiente:** —
 - **Fecha de última actualización:** 2026-05-19
 
@@ -33,33 +33,48 @@
 
 ## Decisiones de diseño clave
 
+- **Auditoría termodinámica nivel maestría completada** (2026-05-19, commit `d492578`):
+  - `Q_disp_kw` corregido a `Q_cond_kw − Q_perdidas_kw` (bug crítico: antes era idéntico a `Q_cond_kw`).
+  - Añadido `globalEnergyClosurePct` — cierre energético global (1.ª Ley): `|Q_cond − (Q_evap + W_comp)| / Q_cond × 100`.
+  - Eliminados `W_comp_disp_kw`, `COP_disp`, `massClosurePct` (redundantes/no usados en UI).
+  - `waterProps.ts` documenta desprecio de presión en líquido subenfriado (< 0,01 %). Propaga `wasClamped`.
+  - `BalanceTable.tsx`: renombrada columna "Calor sensible (q)" → "Flujo de entalpía (M·h)".
+  - `ProcessDiagram.tsx`: comentarios limpios, subtítulo dinámico, óvalo CO₂ reducido.
+  - Benchmark `scripts/validateThermo.ts`: 8/8 pasan, cierre global = 0,000000 %.
+
 - **Modelo termodinámico: circuitos abiertos independientes** (2026-05-19). Reemplazó el modelo anterior de loop cerrado WFI. El sistema real tiene:
   - Lado caliente: Tanque 7 (75 °C) → Gas Cooler → 90 °C → Consumo sanitización (sin retorno).
-  - Lado frío: Piscina (28,9 °C) → Evaporador → 15 °C → Descarte.
-  - Archivos modificados: `shared/thermo/balanceEngine.ts`, `shared/thermo/types.ts`, `src/store/useThermoStore.ts`, `ProcessDiagram.tsx`, `ThermoParamControls.tsx`, `BalanceTable.tsx`.
+  - Lado frío: Piscina (28,9 °C) → Evaporador → 15 °C → Retorno a piscina.
 
-- **R744 validación transcrítica** (2026-05-19): Se añadió `T_evap_design_C: 22` a RefrigerantData para que la validación use la T_sat del CO₂ a 57,8 bar (22 °C) en vez de la temperatura del agua (60 °C), evitando la falsa alarma "Operación imposible".
+- **Corrección bug validación refrigerante** (2026-05-19, commit `a94da43`):
+  - `validateRefrigerant` recibía `T_piscina_out` como fuente de calor del evaporador. Fuente correcta: `T_piscina_in` (28,9 °C).
+  - Mensaje de margen crítico para transcríticos corregido: margen negativo = operación supercrítica por diseño.
 
-- **shared/engine vs server/engine**: Ambos archivos son idénticos tras auditoría 2026-05-19. Divergencia crítica corregida (`calculator.ts` tenía cálculo dinámico de energía en `shared/` pero factores fijos en `server/`).
+- **R744 validación transcrítica** (2026-05-19): `T_evap_design_C: 22` en RefrigerantData para evitar falsa alarma.
 
-- **OPEX fuente autoritativa**: Excel `2025BC-MC001 REV6.xlsx` prevalece sobre el PDF cuando hay discrepancia (confirmado por usuario).
+- **shared/engine vs server/engine**: Idénticos tras auditoría 2026-05-19.
 
-- **VPN PDF vs calculator**: El pie de página del PDF dice "$1.318.200" pero el Cuadro 13 da VPN acumulado año 15 ≈ $557.696. El código es correcto; la cifra del pie parece error editorial.
+- **OPEX fuente autoritativa**: Excel `2025BC-MC001 REV6.xlsx` prevalece sobre PDF.
+
+- **VPN PDF vs calculator**: Pie de página PDF "$1.318.200" vs Cuadro 13 ≈ $557.696. El código es correcto; cifra del pie parece error editorial.
+
+- **Despliegue**: GitHub Actions para deploy automático a GitHub Pages. `vite.config.ts`: `base: './'`.
 
 ## Archivos clave y su propósito
 
-- `shared/engine/constants.ts` — CAPEX, OPEX, DEFAULT_PARAMS, factores ambientales (fuente de verdad del frontend)
-- `shared/engine/calculator.ts` — Motor financiero: CAPEX, OPEX, VPN, TIR, payback, escenarios
-- `shared/thermo/balanceEngine.ts` — Motor termodinámico: balance M&E, caudales, propiedades IAPWS-IF97
-- `shared/thermo/types.ts` — Interfaces Stream, ThermoParams, BalanceResult, WaterProps
-- `shared/thermo/waterProps.ts` — Propiedades del agua líquida (ρ, cp, h, μ, k)
-- `shared/thermo/refrigerants.ts` — Base de datos refrigerantes + validateRefrigerant()
-- `src/store/useProjectStore.ts` — Estado económico Zustand, importa de shared/engine
-- `src/store/useThermoStore.ts` — Estado termodinámico Zustand, importa de shared/thermo
-- `src/components/process/ProcessDiagram.tsx` — PFD SVG interactivo (circuitos abiertos, sin cruces)
-- `src/components/process/ThermoParamControls.tsx` — Sliders ΔT caliente, T salida piscina, COP
-- `src/components/process/BalanceTable.tsx` — Tabla de balance M&E (4 corrientes: C1, C2, P1, P2)
-- `src/sections/DetalleOpex.tsx` — Tabla OPEX editable (corregido doble escalamiento)
+- `shared/thermo/balanceEngine.ts` — Motor termodinámico: balance M&E, caudales, propiedades IAPWS-IF97, cierre energético global.
+- `shared/thermo/types.ts` — Interfaces Stream, ThermoParams, BalanceResult, WaterProps.
+- `shared/thermo/waterProps.ts` — Propiedades del agua líquida (ρ, cp, h, μ, k).
+- `shared/thermo/refrigerants.ts` — Base de datos refrigerantes + validateRefrigerant().
+- `src/store/useThermoStore.ts` — Estado Zustand del módulo termodinámico.
+- `src/components/process/ProcessDiagram.tsx` — PFD SVG interactivo (circuitos abiertos).
+- `src/components/process/ThermoParamControls.tsx` — Sliders ΔT caliente, T salida piscina, COP.
+- `src/components/process/BalanceTable.tsx` — Tabla de balance M&E (4 corrientes: C1, C2, P1, P2).
+- `src/components/process/ThermoAlert.tsx` — Alertas de validación térmica.
+- `scripts/validateThermo.ts` — Benchmark automatizado del motor (8 tests).
+- `shared/engine/constants.ts` — CAPEX, OPEX, DEFAULT_PARAMS, factores ambientales.
+- `shared/engine/calculator.ts` — Motor financiero: CAPEX, OPEX, VPN, TIR, payback, escenarios.
+- `src/sections/DetalleOpex.tsx` — Tabla OPEX editable (corregido doble escalamiento).
 
 ## Preguntas abiertas / bloqueos
 
@@ -68,6 +83,8 @@
 - [x] Divergencia crítica server/shared corregida.
 - [x] Doble escalamiento OPEX corregido.
 - [x] Modelo termodinámico corregido a circuitos abiertos.
+- [x] Bug validación refrigerante corregido.
+- [x] Auditoría termodinámica nivel maestría completada (T1–T10).
 
 ## Comandos útiles
 
@@ -84,6 +101,9 @@ npm run build
 
 # Verificar sincronización motores económicos
 diff -ru server/engine/ shared/engine/
+
+# Benchmark termodinámico
+npx tsx scripts/validateThermo.ts
 
 # Abrir browser
 Start-Process "http://localhost:5173"
