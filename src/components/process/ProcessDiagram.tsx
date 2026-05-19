@@ -47,16 +47,17 @@ function SvgText({
 export default function ProcessDiagram() {
   const { result, params, refrigerant, refrigerantValidation } = useThermoStore();
   const [hovered, setHovered] = useState<string | null>(null);
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; content: string } | null>(null);
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; content: string; placement: "left" | "right" } | null>(null);
 
   const s1 = result.streams[0]; // C1: WFI Tanque 7 → Gas Cooler (75°C)
   const s2 = result.streams[1]; // C2: Gas Cooler → Distribución sanitización (90°C)
   const s_p1 = result.streams[2]; // P1: Piscina → Evaporador (28.9°C)
-  const s_p2 = result.streams[3]; // P2: Evaporador → Salida fría (15°C)
+  const s_p2 = result.streams[3]; // P2: Evaporador → Retorno piscina (15°C)
 
   const handleMouseEnter = (e: React.MouseEvent, content: string) => {
     setHovered(content);
-    setTooltip({ x: e.clientX, y: e.clientY - 40, content });
+    const placement = e.clientX > window.innerWidth / 2 ? "left" : "right";
+    setTooltip({ x: e.clientX, y: e.clientY - 40, content, placement });
   };
   const handleMouseMove = (e: React.MouseEvent) => {
     if (tooltip) setTooltip({ ...tooltip, x: e.clientX, y: e.clientY - 40 });
@@ -86,7 +87,7 @@ export default function ProcessDiagram() {
   const piscinaOut = { x: piscina.x + piscina.w, y: piscina.y + 50 };
   const bcColdIn   = { x: bc.x,                  y: bc.y + bc.h - 55 };
   const bcColdOut  = { x: bc.x + bc.w,           y: bc.y + bc.h - 55 };
-  const salidaFría = { x: bc.x + bc.w + 120,     y: bc.y + bc.h - 55 };
+  // P2 retorna a piscina: bcColdOut → derecha → abajo → izquierda → piscina
 
   return (
     <div className="relative w-full overflow-x-auto">
@@ -204,10 +205,10 @@ export default function ProcessDiagram() {
         </SvgText>
 
         {/* ═══════════════════════════════════════════════════
-            CORRIENTE P2: Evaporador → Salida fría (15°C)
+            CORRIENTE P2: Evaporador → Retorno piscina (15°C)
            ═══════════════════════════════════════════════════ */}
         <path
-          d={`M${bcColdOut.x},${bcColdOut.y} L${salidaFría.x - 8},${salidaFría.y}`}
+          d={`M${bcColdOut.x},${bcColdOut.y} L${bcColdOut.x + 60},${bcColdOut.y} L${bcColdOut.x + 60},${piscina.y + piscina.h / 2} L${piscina.x + piscina.w + 8},${piscina.y + piscina.h / 2}`}
           stroke="#79C0FF"
           strokeWidth="3"
           fill="none"
@@ -217,11 +218,14 @@ export default function ProcessDiagram() {
           onMouseLeave={handleMouseLeave}
           className={`cursor-pointer transition-opacity ${hovered === "P2" ? "" : "flow-anim-blue"}`}
         />
-        <SvgText x={(bcColdOut.x + salidaFría.x) / 2} y={bcColdOut.y + 18} fill="#79C0FF" fontSize={12}>
+        <SvgText x={bcColdOut.x + 30} y={bcColdOut.y - 14} fill="#79C0FF" fontSize={12}>
           P2 · {s_p2.T_C.toFixed(0)} °C
         </SvgText>
-        <SvgText x={(bcColdOut.x + salidaFría.x) / 2} y={bcColdOut.y - 14} fill="#8B949E" fontWeight={400} fontSize={10}>
+        <SvgText x={bcColdOut.x + 30} y={bcColdOut.y + 18} fill="#8B949E" fontWeight={400} fontSize={10}>
           {s_p2.volFlow.toFixed(1)} m³/h · {s_p2.massFlow.toFixed(0)} kg/h
+        </SvgText>
+        <SvgText x={(bcColdOut.x + 60 + piscina.x + piscina.w) / 2} y={piscina.y + piscina.h / 2 + 18} fill="#79C0FF" fontSize={11}>
+          Retorno a piscina
         </SvgText>
 
         {/* ═══════════════════════════════════════════════════
@@ -393,25 +397,11 @@ export default function ProcessDiagram() {
           </SvgText>
         </g>
 
-        {/* Salida fría (etiqueta sin bloque) */}
-        <SvgText x={salidaFría.x} y={salidaFría.y - 14} fill="#79C0FF" fontSize={11}>
-          Salida agua fría
-        </SvgText>
-        <SvgText x={salidaFría.x} y={salidaFría.y + 14} fill="#8B949E" fontWeight={400} fontSize={10}>
-          {params.T_piscina_out.toFixed(0)} °C · descarte/recirculación
-        </SvgText>
-
-        {/* Badges Q_cond / Q_evap exteriores */}
+        {/* Badge Q_cond exterior (arriba del BC) */}
         <g transform={`translate(${bc.x + bc.w / 2}, ${bc.y - 24})`}>
           <rect x="-60" y="-12" width="120" height="22" rx="6" fill="#3FB950" fillOpacity="0.12" stroke="#3FB950" strokeWidth="1" />
           <SvgText x={0} y={0} fill="#3FB950" fontSize={11}>
             Q_cond = {result.Q_cond_kw.toFixed(0)} kW
-          </SvgText>
-        </g>
-        <g transform={`translate(${bc.x + bc.w / 2}, ${bc.y + bc.h + 24})`}>
-          <rect x="-60" y="-12" width="120" height="22" rx="6" fill="#A371F7" fillOpacity="0.12" stroke="#A371F7" strokeWidth="1" />
-          <SvgText x={0} y={0} fill="#A371F7" fontSize={11}>
-            Q_evap = {result.Q_evap_kw.toFixed(0)} kW
           </SvgText>
         </g>
 
@@ -423,11 +413,15 @@ export default function ProcessDiagram() {
         </g>
       </svg>
 
-      {/* Tooltip HTML */}
+      {/* Tooltip HTML con posicionamiento inteligente */}
       {tooltip && (
         <div
-          className="pointer-events-none fixed z-50 rounded-lg border border-[rgba(48,54,61,0.6)] bg-[#0D1117] px-3 py-2 text-xs text-[#E6EDF3] shadow-xl"
-          style={{ left: tooltip.x + 12, top: tooltip.y }}
+          className="pointer-events-none fixed z-50 max-w-[280px] rounded-lg border border-[rgba(48,54,61,0.6)] bg-[#0D1117] px-3 py-2 text-xs leading-relaxed text-[#E6EDF3] shadow-xl"
+          style={{
+            left: tooltip.placement === "left" ? tooltip.x - 292 : tooltip.x + 12,
+            top: tooltip.y,
+            wordBreak: "break-word",
+          }}
         >
           {tooltip.content.split("\n").map((line, i) => (
             <div key={i}>{line}</div>

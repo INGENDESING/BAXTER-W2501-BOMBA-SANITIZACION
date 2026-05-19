@@ -113,7 +113,7 @@ export function calcularBalance(params: ThermoParams): BalanceResult {
     },
     {
       name: "P2",
-      description: "Evaporador CO₂ → Salida agua fría (15°C)",
+      description: "Evaporador CO₂ → Retorno piscina (15°C)",
       T_C: params.T_piscina_out,
       P_g_bar: params.P_g_frio,
       volFlow: V_piscina,

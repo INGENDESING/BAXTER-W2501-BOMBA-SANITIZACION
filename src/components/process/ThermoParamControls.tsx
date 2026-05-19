@@ -119,7 +119,7 @@ export default function ThermoParamControls() {
           step={0.1}
           suffix=" °C"
           onChange={setTempSalidaPiscina}
-          hint={`T entrada = ${params.T_piscina_in} °C → T salida = ${params.T_piscina_out.toFixed(1)} °C · Caudal = ${result.volFlow_piscina_m3h.toFixed(2)} m³/h · Q_evap = ${result.Q_evap_kw.toFixed(1)} kW`}
+          hint={`T entrada = ${params.T_piscina_in} °C → T salida = ${params.T_piscina_out.toFixed(1)} °C · Caudal = ${result.volFlow_piscina_m3h.toFixed(2)} m³/h · Q_evap = ${result.Q_evap_kw.toFixed(1)} kW · Circuito cerrado piscina`}
         />
 
         {/* COP */}

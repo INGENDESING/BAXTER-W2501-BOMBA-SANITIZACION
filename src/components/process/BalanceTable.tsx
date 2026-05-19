@@ -45,7 +45,7 @@ export default function BalanceTable() {
               <th className="px-3 py-2.5 text-center font-semibold text-[#8B949E]">
                 <div>
                   <span className="text-[#79C0FF]">P2</span>
-                  <div className="mt-0.5 text-[10px] font-normal text-[#8B949E]">Evaporador → Salida fría</div>
+                  <div className="mt-0.5 text-[10px] font-normal text-[#8B949E]">Evaporador → Retorno piscina</div>
                 </div>
               </th>
             </tr>
