@@ -1,5 +1,6 @@
 // ───────────────────────────────────────────────────────────────
 // Tipos del motor termodinámico — Balance M&E 2025BC
+// Circuitos abiertos: caliente (sanitización) / frío (piscina)
 // ───────────────────────────────────────────────────────────────
 
 /** Propiedades termodinámicas de una corriente de agua líquida */
@@ -16,7 +17,7 @@ export interface WaterProps {
 
 /** Corriente del proceso con flujo y propiedades */
 export interface Stream {
-  name: string;           // C1, C2, C3, C4
+  name: string;           // C1, C2, P1, P2
   description: string;
   T_C: number;
   P_g_bar: number;        // Presión manométrica [barg]
@@ -46,18 +47,19 @@ export interface BalanceResult {
   costo_bc_refrig_usd_año: number; // Costo eléctrico BC como refrigerador [USD/año]
   costo_chiller_equiv_usd_año: number; // Costo chiller eléctrico estándar (COP_R=3,5) [USD/año]
   ahorro_vs_chiller_usd_año: number;  // Ahorro vs chiller estándar [USD/año]
+  // ── Caudales calculados ──
+  volFlow_sanitizacion_m3h: number; // Caudal lado caliente [m³/h]
+  volFlow_piscina_m3h: number;     // Caudal lado frío [m³/h]
 }
 
 /** Parámetros de entrada para el cálculo del balance */
 export interface ThermoParams {
   T_c1: number;           // WFI Tanque 7 → Gas Cooler (entrada) [°C]
   T_c2: number;           // WFI Gas Cooler → Distribución (salida) [°C]
-  T_c3: number;           // WFI retorno → Evaporador (entrada) [°C]
-  T_c4: number;           // WFI Evaporador → Tanque 7 (salida) [°C]
+  T_piscina_in: number;   // Agua piscina → Evaporador (entrada) [°C]
+  T_piscina_out: number;  // Agua piscina ← Evaporador (salida) [°C]
   P_g_caliente: number;   // Presión manométrica lado caliente [barg]
   P_g_frio: number;       // Presión manométrica lado frío [barg]
-  V_c1: number;           // Caudal volumétrico C1 [m³/h] (output del cálculo)
-  V_c3: number;           // Caudal volumétrico C3 [m³/h] (output del cálculo)
   altitud_msnm: number;   // Altitud del sitio [msnm]
   incluirPerdidas: boolean;
   Q_perdidas_kw: number;  // Pérdidas térmicas [kW]

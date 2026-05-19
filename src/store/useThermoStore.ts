@@ -4,9 +4,8 @@ import { calcularBalance, DEFAULT_THERMO_PARAMS } from "../../shared/thermo/bala
 import { validateRefrigerant } from "../../shared/thermo/refrigerants";
 
 interface ThermoStore extends ThermoState {
-  // Controles de ΔT (lógica operacional: Q fijo, caudal variable)
   setDeltaTCaliente: (deltaT: number) => void;
-  setDeltaTFrio: (deltaT: number) => void;
+  setTempSalidaPiscina: (t: number) => void;
   setCOP: (cop: number) => void;
   setRefrigerant: (name: string) => void;
   togglePerdidas: () => void;
@@ -22,15 +21,16 @@ function computeState(params: ThermoParams, refrigerant: string): ThermoState {
     const validation = validateRefrigerant(
       refrigerant,
       params.T_c2,
-      params.T_c4,
+      params.T_piscina_out,
       params.copOperativo
     );
     return { params, result, refrigerant, refrigerantValidation: validation };
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error("Error en motor termodinámico:", err);
-    // Devolver estado de fallback con resultado vacío para no romper la UI
-    const fallbackResult = calcularBalance({ ...params, T_c2: 93.0, T_c4: 20.89 });
+    // Fallback: usar parámetros seguros
+    const fallbackParams = { ...params, T_c2: 93.0, T_piscina_out: 20.0 };
+    const fallbackResult = calcularBalance(fallbackParams);
     return {
       params,
       result: fallbackResult,
@@ -45,7 +45,7 @@ function computeState(params: ThermoParams, refrigerant: string): ThermoState {
   }
 }
 
-const initial = computeState(structuredClone(DEFAULT_THERMO_PARAMS), "R513A");
+const initial = computeState(structuredClone(DEFAULT_THERMO_PARAMS), "R744");
 
 export const useThermoStore = create<ThermoStore>()((set, get) => ({
   ...initial,
@@ -57,10 +57,10 @@ export const useThermoStore = create<ThermoStore>()((set, get) => ({
       return computeState(params, state.refrigerant);
     }),
 
-  /** Cambia ΔT del lado frío; T_c3 permanece fija */
-  setDeltaTFrio: (deltaT) =>
+  /** Cambia temperatura de salida del agua de piscina del evaporador */
+  setTempSalidaPiscina: (t) =>
     set((state) => {
-      const params = { ...state.params, T_c4: state.params.T_c3 - deltaT };
+      const params = { ...state.params, T_piscina_out: t };
       return computeState(params, state.refrigerant);
     }),
 
@@ -91,7 +91,7 @@ export const useThermoStore = create<ThermoStore>()((set, get) => ({
       return computeState(params, state.refrigerant);
     }),
 
-  resetParams: () => set(() => computeState(structuredClone(DEFAULT_THERMO_PARAMS), "R513A")),
+  resetParams: () => set(() => computeState(structuredClone(DEFAULT_THERMO_PARAMS), "R744")),
 
   syncToEconomic: () => {
     const { result, params } = get();

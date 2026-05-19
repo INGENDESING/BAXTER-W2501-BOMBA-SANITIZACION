@@ -1,279 +1,179 @@
 import { useThermoStore } from "../../store/useThermoStore";
-import { formatNumber } from "../../lib/utils";
 
-function Row({
-  label,
-  siUnit,
-  values,
-  isHeader = false,
-  isSubHeader = false,
-}: {
-  label: string;
-  siUnit?: string;
-  values?: (string | number)[];
-  isHeader?: boolean;
-  isSubHeader?: boolean;
-}) {
-  if (isHeader) {
-    return (
-      <tr className="border-b border-[rgba(48,54,61,0.6)] bg-[#161B22]">
-        <td colSpan={6} className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#79C0FF]">
-          {label}
-        </td>
-      </tr>
-    );
-  }
-  if (isSubHeader) {
-    return (
-      <tr className="border-b border-[rgba(48,54,61,0.4)] bg-[#0D1117]/60">
-        <td className="px-3 py-1.5 text-xs font-semibold text-[#8B949E]">{label}</td>
-        <td className="px-2 py-1.5 text-xs text-[#8B949E]">{siUnit}</td>
-        {(values ?? []).map((v, i) => (
-          <td key={i} className="px-2 py-1.5 text-xs font-semibold text-[#8B949E]">
-            {v}
-          </td>
-        ))}
-      </tr>
-    );
-  }
-  return (
-    <tr className="border-b border-[rgba(48,54,61,0.2)] transition-colors hover:bg-[#161B22]/40">
-      <td className="px-3 py-1.5 text-xs text-[#E6EDF3]">{label}</td>
-      <td className="px-2 py-1.5 text-xs text-[#8B949E]">{siUnit}</td>
-      {(values ?? []).map((v, i) => (
-        <td key={i} className="px-2 py-1.5 text-right text-xs text-[#E6EDF3]">{v}</td>
-      ))}
-    </tr>
-  );
+function fmt(v: number, d: number = 1) {
+  return Number.isFinite(v) ? v.toFixed(d) : "—";
 }
 
 export default function BalanceTable() {
   const { result, params } = useThermoStore();
-  const s = result.streams;
 
-  const psi_per_bar = 14.50377377;
-  const toPsi = (bar: number) => bar * psi_per_bar;
-
-  const clampedStreams = s.filter((stream) => stream.props.wasClamped);
+  const s1 = result.streams[0]; // C1: WFI Tanque 7 → Gas Cooler (75°C)
+  const s2 = result.streams[1]; // C2: Gas Cooler → Distribución sanitización (90°C)
+  const s_p1 = result.streams[2]; // P1: Piscina → Evaporador (28.9°C)
+  const s_p2 = result.streams[3]; // P2: Evaporador → Salida fría (15°C)
 
   return (
-    <div className="overflow-x-auto space-y-2">
-      {clampedStreams.length > 0 && (
-        <div className="rounded-md border border-[#F85149]/30 bg-[#F85149]/10 px-3 py-2 text-xs text-[#F85149]">
-          <strong>Advertencia:</strong> Propiedades termodinámicas clampadas para{" "}
-          {clampedStreams.map((st) => st.name).join(", ")} (fuera de rango 15–100 °C).
-          Los caudales mostrados son aproximados.
-        </div>
-      )}
-      <table className="w-full border-collapse text-xs">
-        <thead>
-          <tr className="border-b-2 border-[#79C0FF]/30">
-            <th colSpan={6} className="px-3 py-3 text-left text-sm font-bold text-[#E6EDF3]">
-              Balance de Materia y Energía — Condiciones Operativas
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {/* ── Condiciones ambientales ── */}
-          <Row label="Condiciones ambientales" isHeader values={[]} />
-          <tr className="border-b border-[rgba(48,54,61,0.2)]">
-            <td className="px-3 py-1.5 text-xs text-[#E6EDF3]">Altitud del sitio</td>
-            <td colSpan={2} className="px-2 py-1.5 text-xs text-[#E6EDF3]">{params.altitud_msnm} msnm</td>
-            <td colSpan={3}></td>
-          </tr>
-          <tr className="border-b border-[rgba(48,54,61,0.2)]">
-            <td className="px-3 py-1.5 text-xs text-[#E6EDF3]">Presión atmosférica</td>
-            <td colSpan={2} className="px-2 py-1.5 text-xs text-[#E6EDF3]">
-              {result.P_atm_bar.toFixed(4)} bar(a) = {toPsi(result.P_atm_bar).toFixed(2)} psia
-            </td>
-            <td colSpan={3}></td>
-          </tr>
+    <div className="space-y-6">
+      <h3 className="text-sm font-bold uppercase tracking-wider text-[#8B949E]">
+        Balance de Materia y Energía · Circuitos Abiertos
+      </h3>
 
-          {/* ── Encabezados de corrientes ── */}
-          <tr className="border-b border-[#79C0FF]/20 bg-[#161B22]/80">
-            <td className="px-3 py-2 text-xs font-bold text-[#79C0FF]">Parámetro</td>
-            <td className="px-2 py-2 text-xs font-bold text-[#79C0FF]">Unidad</td>
-            <td className="px-2 py-2 text-center text-xs font-bold text-[#F85149]">C1</td>
-            <td className="px-2 py-2 text-center text-xs font-bold text-[#F85149]">C2</td>
-            <td className="px-2 py-2 text-center text-xs font-bold text-[#79C0FF]">C3</td>
-            <td className="px-2 py-2 text-center text-xs font-bold text-[#79C0FF]">C4</td>
-          </tr>
-
-          {/* ── Datos de corrientes ── */}
-          <Row
-            label="Descripción"
-            values={[s[0].description, s[1].description, s[2].description, s[3].description]}
-          />
-          <Row
-            label="Flujo másico"
-            siUnit="kg/h"
-            values={[
-              formatNumber(s[0].massFlow, 1),
-              formatNumber(s[1].massFlow, 1),
-              formatNumber(s[2].massFlow, 1),
-              formatNumber(s[3].massFlow, 1),
-            ]}
-          />
-          <Row
-            label="Flujo volumétrico"
-            siUnit="m³/h"
-            values={[
-              formatNumber(s[0].volFlow, 2),
-              formatNumber(s[1].volFlow, 3),
-              formatNumber(s[2].volFlow, 2),
-              formatNumber(s[3].volFlow, 3),
-            ]}
-          />
-          <Row
-            label="Temperatura"
-            siUnit="°C"
-            values={[s[0].T_C.toFixed(1), s[1].T_C.toFixed(1), s[2].T_C.toFixed(1), s[3].T_C.toFixed(1)]}
-          />
-          <Row
-            label="Presión (abs)"
-            siUnit="bar(a)"
-            values={[
-              s[0].props.P_bar.toFixed(3),
-              s[1].props.P_bar.toFixed(3),
-              s[2].props.P_bar.toFixed(3),
-              s[3].props.P_bar.toFixed(3),
-            ]}
-          />
-          <Row
-            label="Presión (man)"
-            siUnit="barg"
-            values={[
-              s[0].P_g_bar.toFixed(2),
-              s[1].P_g_bar.toFixed(2),
-              s[2].P_g_bar.toFixed(2),
-              s[3].P_g_bar.toFixed(2),
-            ]}
-          />
-          <Row
-            label="Densidad"
-            siUnit="kg/m³"
-            values={[
-              formatNumber(s[0].props.rho, 2),
-              formatNumber(s[1].props.rho, 2),
-              formatNumber(s[2].props.rho, 2),
-              formatNumber(s[3].props.rho, 2),
-            ]}
-          />
-          <Row
-            label="Viscosidad dinámica"
-            siUnit="cP"
-            values={[s[0].props.mu_cP.toFixed(4), s[1].props.mu_cP.toFixed(4), s[2].props.mu_cP.toFixed(4), s[3].props.mu_cP.toFixed(4)]}
-          />
-          <Row
-            label="Conductividad térmica"
-            siUnit="W/(m·K)"
-            values={[
-              formatNumber(s[0].props.k, 4),
-              formatNumber(s[1].props.k, 4),
-              formatNumber(s[2].props.k, 4),
-              formatNumber(s[3].props.k, 4),
-            ]}
-          />
-          <Row
-            label="Calor específico"
-            siUnit="kJ/(kg·°C)"
-            values={[
-              formatNumber(s[0].props.cp, 4),
-              formatNumber(s[1].props.cp, 4),
-              formatNumber(s[2].props.cp, 4),
-              formatNumber(s[3].props.cp, 4),
-            ]}
-          />
-          <Row
-            label="Entalpía específica"
-            siUnit="kJ/kg"
-            values={[
-              formatNumber(s[0].props.h, 2),
-              formatNumber(s[1].props.h, 2),
-              formatNumber(s[2].props.h, 2),
-              formatNumber(s[3].props.h, 2),
-            ]}
-          />
-          <Row
-            label="Heat Flow (M·h)"
-            siUnit="kJ/h"
-            values={[
-              formatNumber(s[0].heatFlow, 0),
-              formatNumber(s[1].heatFlow, 0),
-              formatNumber(s[2].heatFlow, 0),
-              formatNumber(s[3].heatFlow, 0),
-            ]}
-          />
-
-          {/* ── Verificación del balance ── */}
-          <Row label="Verificación del balance" isHeader values={[]} />
-          <tr className="border-b border-[rgba(48,54,61,0.2)]">
-            <td className="px-3 py-2 text-xs text-[#E6EDF3]">Balance de masa</td>
-            <td colSpan={5} className="px-3 py-2 text-xs text-[#8B949E]">
-              Lado caliente: C1 = C2 = <span className="text-[#E6EDF3]">{formatNumber(s[0].massFlow, 1)} kg/h</span> (error 0,00 %) ·{" "}
-              Lado frío: C3 = C4 = <span className="text-[#E6EDF3]">{formatNumber(s[2].massFlow, 1)} kg/h</span> (error 0,00 %)
-            </td>
-          </tr>
-          <tr className="border-b border-[rgba(48,54,61,0.2)]">
-            <td className="px-3 py-2 text-xs text-[#E6EDF3]">Balance de energía</td>
-            <td colSpan={5} className="px-3 py-2 text-xs text-[#8B949E]">
-              Q<sub>cond</sub> = <span className="text-[#3FB950]">{result.Q_cond_kw.toFixed(2)} kW</span> ·{" "}
-              Q<sub>evap</sub> = <span className="text-[#A371F7]">{result.Q_evap_kw.toFixed(2)} kW</span> ·{" "}
-              W<sub>comp</sub> = <span className="text-[#F0883E]">{result.W_comp_kw.toFixed(2)} kW</span> ·{" "}
-              COP<sub>calc</sub> = <span className="text-[#79C0FF]">{result.COP_calc.toFixed(3)}</span>
-            </td>
-          </tr>
-          <tr className="border-b border-[rgba(48,54,61,0.2)]">
-            <td className="px-3 py-2 text-xs text-[#E6EDF3]">Verificación algebraica</td>
-            <td colSpan={5} className="px-3 py-2 text-xs text-[#8B949E]">
-              Q<sub>cond</sub> = Q<sub>evap</sub> + W<sub>comp</sub> →{" "}
-              <span className="text-[#E6EDF3]">{result.Q_cond_kw.toFixed(2)} = {(result.Q_evap_kw + result.W_comp_kw).toFixed(2)} kW</span>{" "}
-              (error {result.energyClosurePct.toFixed(4)} %)
-            </td>
-          </tr>
-          {params.incluirPerdidas && (
-            <tr className="border-b border-[rgba(48,54,61,0.2)]">
-              <td className="px-3 py-2 text-xs text-[#E6EDF3]">Incluyendo pérdidas</td>
-              <td colSpan={5} className="px-3 py-2 text-xs text-[#8B949E]">
-                Q<sub>disp</sub> = {result.Q_disp_kw.toFixed(2)} kW · W<sub>comp,disp</sub> = {result.W_comp_disp_kw.toFixed(2)} kW · COP<sub>disp</sub> = {result.COP_disp.toFixed(3)}
-              </td>
+      {/* ── Tabla de corrientes ── */}
+      <div className="overflow-x-auto rounded-lg border border-[rgba(48,54,61,0.6)]">
+        <table className="w-full border-collapse text-xs">
+          <thead>
+            <tr className="border-b border-[rgba(48,54,61,0.6)] bg-[#161B22]">
+              <th className="px-3 py-2.5 text-left font-semibold text-[#8B949E]">Propiedad</th>
+              <th className="px-3 py-2.5 text-center font-semibold text-[#8B949E]">
+                <div>
+                  <span className="text-[#F85149]">C1</span>
+                  <div className="mt-0.5 text-[10px] font-normal text-[#8B949E]">Tanque 7 → Gas Cooler</div>
+                </div>
+              </th>
+              <th className="px-3 py-2.5 text-center font-semibold text-[#8B949E]">
+                <div>
+                  <span className="text-[#F85149]">C2</span>
+                  <div className="mt-0.5 text-[10px] font-normal text-[#8B949E]">Gas Cooler → Distribución</div>
+                </div>
+              </th>
+              <th className="px-3 py-2.5 text-center font-semibold text-[#8B949E]">
+                <div>
+                  <span className="text-[#79C0FF]">P1</span>
+                  <div className="mt-0.5 text-[10px] font-normal text-[#8B949E]">Piscina → Evaporador</div>
+                </div>
+              </th>
+              <th className="px-3 py-2.5 text-center font-semibold text-[#8B949E]">
+                <div>
+                  <span className="text-[#79C0FF]">P2</span>
+                  <div className="mt-0.5 text-[10px] font-normal text-[#8B949E]">Evaporador → Salida fría</div>
+                </div>
+              </th>
             </tr>
-          )}
+          </thead>
+          <tbody className="divide-y divide-[rgba(48,54,61,0.4)]">
+            <tr>
+              <td className="px-3 py-2 text-[#8B949E]">Temperatura</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s1.T_C, 1)} °C</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s2.T_C, 1)} °C</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s_p1.T_C, 1)} °C</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s_p2.T_C, 1)} °C</td>
+            </tr>
+            <tr className="bg-[#0D1117]/40">
+              <td className="px-3 py-2 text-[#8B949E]">Presión absoluta</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s1.props.P_bar, 3)} bar(a)</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s2.props.P_bar, 3)} bar(a)</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s_p1.props.P_bar, 3)} bar(a)</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s_p2.props.P_bar, 3)} bar(a)</td>
+            </tr>
+            <tr>
+              <td className="px-3 py-2 text-[#8B949E]">Flujo volumétrico</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s1.volFlow, 2)} m³/h</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s2.volFlow, 2)} m³/h</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s_p1.volFlow, 2)} m³/h</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s_p2.volFlow, 2)} m³/h</td>
+            </tr>
+            <tr className="bg-[#0D1117]/40">
+              <td className="px-3 py-2 text-[#8B949E]">Flujo másico</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s1.massFlow, 0)} kg/h</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s2.massFlow, 0)} kg/h</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s_p1.massFlow, 0)} kg/h</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s_p2.massFlow, 0)} kg/h</td>
+            </tr>
+            <tr>
+              <td className="px-3 py-2 text-[#8B949E]">Densidad (ρ)</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s1.props.rho, 1)} kg/m³</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s2.props.rho, 1)} kg/m³</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s_p1.props.rho, 1)} kg/m³</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s_p2.props.rho, 1)} kg/m³</td>
+            </tr>
+            <tr className="bg-[#0D1117]/40">
+              <td className="px-3 py-2 text-[#8B949E]">Entalpía (h)</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s1.props.h, 1)} kJ/kg</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s2.props.h, 1)} kJ/kg</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s_p1.props.h, 1)} kJ/kg</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s_p2.props.h, 1)} kJ/kg</td>
+            </tr>
+            <tr>
+              <td className="px-3 py-2 text-[#8B949E]">
+                <span className="text-[#3FB950]">c<sub>p</sub></span>
+              </td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s1.props.cp, 3)} kJ/kg·°C</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s2.props.cp, 3)} kJ/kg·°C</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s_p1.props.cp, 3)} kJ/kg·°C</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s_p2.props.cp, 3)} kJ/kg·°C</td>
+            </tr>
+            <tr className="bg-[#0D1117]/40">
+              <td className="px-3 py-2 text-[#8B949E]">Viscosidad (μ)</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s1.props.mu_cP, 2)} cP</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s2.props.mu_cP, 2)} cP</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s_p1.props.mu_cP, 2)} cP</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s_p2.props.mu_cP, 2)} cP</td>
+            </tr>
+            <tr>
+              <td className="px-3 py-2 text-[#8B949E]">Conductividad (k)</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s1.props.k, 3)} W/m·K</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s2.props.k, 3)} W/m·K</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s_p1.props.k, 3)} W/m·K</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s_p2.props.k, 3)} W/m·K</td>
+            </tr>
+            <tr className="bg-[#0D1117]/40">
+              <td className="px-3 py-2 text-[#8B949E]">Calor sensible (q)</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s1.heatFlow, 2)} kW</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s2.heatFlow, 2)} kW</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s_p1.heatFlow, 2)} kW</td>
+              <td className="px-3 py-2 text-center text-[#E6EDF3]">{fmt(s_p2.heatFlow, 2)} kW</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-          {/* ── Métricas de refrigeración ── */}
-          <Row label="Métricas de refrigeración" isHeader values={[]} />
-          <tr className="border-b border-[rgba(48,54,61,0.2)]">
-            <td className="px-3 py-2 text-xs text-[#E6EDF3]">Capacidad evaporador</td>
-            <td colSpan={5} className="px-3 py-2 text-xs text-[#8B949E]">
-              Q<sub>evap</sub> = <span className="text-[#A371F7]">{result.Q_evap_kw.toFixed(2)} kW</span> ·{" "}
-              <span className="text-[#A371F7]">{result.TR_evap.toFixed(2)} TR</span> (1 TR = 3,517 kW)
-            </td>
-          </tr>
-          <tr className="border-b border-[rgba(48,54,61,0.2)]">
-            <td className="px-3 py-2 text-xs text-[#E6EDF3]">Eficiencia específica frío</td>
-            <td colSpan={5} className="px-3 py-2 text-xs text-[#8B949E]">
-              {result.kw_per_TR.toFixed(2)} kW<sub>el</sub>/TR · Ref. chiller estándar COP<sub>R</sub>=3,5: {(3.51685 / 3.5).toFixed(2)} kW/TR
-            </td>
-          </tr>
-          <tr className="border-b border-[rgba(48,54,61,0.2)]">
-            <td className="px-3 py-2 text-xs text-[#E6EDF3]">Costo operación anual (frío)</td>
-            <td colSpan={5} className="px-3 py-2 text-xs text-[#8B949E]">
-              BC: <span className="text-[#E6EDF3]">${result.costo_bc_refrig_usd_año.toLocaleString("es-CO", { maximumFractionDigits: 0 })} USD/año</span> ·{" "}
-              Chiller eq.: <span className="text-[#8B949E]">${result.costo_chiller_equiv_usd_año.toLocaleString("es-CO", { maximumFractionDigits: 0 })} USD/año</span> ·{" "}
-              Diferencia: <span className={result.ahorro_vs_chiller_usd_año >= 0 ? "text-[#3FB950]" : "text-[#F85149]"}>
-                {result.ahorro_vs_chiller_usd_año >= 0 ? "−" : "+"}${Math.abs(result.ahorro_vs_chiller_usd_año).toLocaleString("es-CO", { maximumFractionDigits: 0 })} USD/año
-              </span>
-            </td>
-          </tr>
+      {/* ── Balance de energía ── */}
+      <div className="rounded-lg border border-[rgba(48,54,61,0.6)] bg-[#161B22]/60 p-4">
+        <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#8B949E]">
+          Balance Energía
+        </h4>
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="flex justify-between rounded-md bg-[#0D1117]/60 px-3 py-2">
+            <span className="text-[#8B949E]">Q<sub>cond</sub> (Gas Cooler)</span>
+            <span className="font-semibold text-[#F85149]">{fmt(result.Q_cond_kw, 1)} kW</span>
+          </div>
+          <div className="flex justify-between rounded-md bg-[#0D1117]/60 px-3 py-2">
+            <span className="text-[#8B949E]">W<sub>comp</sub></span>
+            <span className="font-semibold text-[#F0883E]">{fmt(result.W_comp_kw, 1)} kW</span>
+          </div>
+          <div className="flex justify-between rounded-md bg-[#0D1117]/60 px-3 py-2">
+            <span className="text-[#8B949E]">Q<sub>evap</sub></span>
+            <span className="font-semibold text-[#A371F7]">{fmt(result.Q_evap_kw, 1)} kW</span>
+          </div>
+          <div className="flex justify-between rounded-md bg-[#0D1117]/60 px-3 py-2">
+            <span className="text-[#8B949E]">COP<sub>operativo</sub></span>
+            <span className="font-semibold text-[#79C0FF]">{fmt(result.COP_calc, 3)}</span>
+          </div>
+        </div>
+        {params.incluirPerdidas && (
+          <div className="mt-3 flex justify-between rounded-md bg-[#0D1117]/60 px-3 py-2 text-sm">
+            <span className="text-[#8B949E]">Q<sub>disp</sub> (con pérdidas)</span>
+            <span className="font-semibold text-[#F85149]">{fmt(result.Q_disp_kw!, 1)} kW</span>
+          </div>
+        )}
+        <div className="mt-3 text-xs text-[#8B949E]">
+          Q<sub>cond</sub> = Q<sub>evap</sub> + W<sub>comp</sub> &nbsp;|&nbsp;
+          Cerradura: <span className="font-semibold text-[#3FB950]">{fmt(result.energyClosurePct, 4)} %</span>
+        </div>
+      </div>
 
-          {/* ── Pie ── */}
-          <tr className="border-t-2 border-[rgba(48,54,61,0.6)]">
-            <td colSpan={6} className="px-3 py-2 text-[10px] text-[#8B949E]">
-              Documento: Balance de Materia y Energía 2025BC-DT005 R1 · Propiedades: IAPWS-IF97 (aproximación) · Altitud: {params.altitud_msnm} msnm
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      {/* ── Leyendas ── */}
+      <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-[#8B949E]">
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-2 w-2 rounded-full bg-[#F85149]" /> Caliente (WFI sanitización)
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-2 w-2 rounded-full bg-[#79C0FF]" /> Frío (piscina)
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-2 w-2 rounded-full bg-[#F0883E]" /> Ciclo CO₂ interno
+        </span>
+      </div>
     </div>
   );
 }

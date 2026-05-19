@@ -61,7 +61,7 @@ export default function ThermoParamControls() {
     result,
     refrigerantValidation,
     setDeltaTCaliente,
-    setDeltaTFrio,
+    setTempSalidaPiscina,
     setCOP,
     togglePerdidas,
     setPerdidas,
@@ -70,7 +70,6 @@ export default function ThermoParamControls() {
   } = useThermoStore();
 
   const deltaT_caliente = params.T_c2 - params.T_c1;
-  const deltaT_frio = params.T_c3 - params.T_c4;
 
   // Formato moneda
   const fmtUSD = (v: number) =>
@@ -108,19 +107,19 @@ export default function ThermoParamControls() {
           step={0.1}
           suffix=" K"
           onChange={setDeltaTCaliente}
-          hint={`T entrada = ${params.T_c1} °C → T salida = ${params.T_c2.toFixed(1)} °C · Caudal = ${result.streams[0].volFlow.toFixed(2)} m³/h`}
+          hint={`T entrada = ${params.T_c1} °C → T salida = ${params.T_c2.toFixed(1)} °C · Caudal = ${result.volFlow_sanitizacion_m3h.toFixed(2)} m³/h`}
         />
 
-        {/* ΔT lado frío */}
+        {/* Temperatura salida piscina */}
         <Slider
-          label="ΔT lado frío (C3 − C4)"
-          value={deltaT_frio}
-          min={3}
-          max={13}
+          label="T salida agua piscina (evaporador)"
+          value={params.T_piscina_out}
+          min={10}
+          max={25}
           step={0.1}
-          suffix=" K"
-          onChange={setDeltaTFrio}
-          hint={`T entrada = ${params.T_c3} °C → T salida = ${params.T_c4.toFixed(1)} °C · Caudal = ${result.streams[2].volFlow.toFixed(2)} m³/h`}
+          suffix=" °C"
+          onChange={setTempSalidaPiscina}
+          hint={`T entrada = ${params.T_piscina_in} °C → T salida = ${params.T_piscina_out.toFixed(1)} °C · Caudal = ${result.volFlow_piscina_m3h.toFixed(2)} m³/h · Q_evap = ${result.Q_evap_kw.toFixed(1)} kW`}
         />
 
         {/* COP */}
@@ -204,7 +203,7 @@ export default function ThermoParamControls() {
           <span className="text-[#8B949E]">Eficiencia</span>
           <span className="text-right text-[#79C0FF]">{result.kw_per_TR.toFixed(2)} kW/TR</span>
           <span className="col-span-2 mt-1 border-t border-[rgba(48,54,61,0.3)] pt-2 text-[10px] text-[#8B949E]">
-            Ref: chiller estándar COP<sub>R</sub>=3,5 → {(KW_PER_TR / COP_R_CHILLER_STD).toFixed(2)} kW/TR
+            Ref: chiller estándar COP<sub>R</sub>=3,5 → {(3.51685 / 3.5).toFixed(2)} kW/TR
           </span>
         </div>
       </div>
@@ -248,7 +247,3 @@ export default function ThermoParamControls() {
     </div>
   );
 }
-
-// Constantes locales para display
-const KW_PER_TR = 3.51685;
-const COP_R_CHILLER_STD = 3.5;
