@@ -15,6 +15,7 @@ function SvgText({
   fontSize = 12,
   fontWeight = 600,
   textAnchor = "middle",
+  opacity = 1,
 }: {
   x: number;
   y: number;
@@ -23,13 +24,14 @@ function SvgText({
   fontSize?: number;
   fontWeight?: number | string;
   textAnchor?: string;
+  opacity?: number;
 }) {
   return (
     <text
       x={x}
       y={y}
       textAnchor={textAnchor as any}
-      style={{ fill }}
+      style={{ fill, opacity }}
       fontSize={fontSize}
       fontWeight={fontWeight}
       dominantBaseline="middle"
@@ -65,44 +67,42 @@ export default function ProcessDiagram() {
   };
 
   // ── Layout SVG ──
-  const W = 960;
-  const H = 640;
+  const W = 1000;
+  const H = 520;
 
-  // Bloques principales
-  const tank7  = { x: 30,  y: 80,  w: 165, h: 120 }; // Tanque 7 (izquierda)
-  const bc     = { x: 310, y: 50,  w: 340, h: 200 }; // Bomba de Calor CO₂ (centro)
-  const distrib = { x: 765, y: 80,  w: 165, h: 120 }; // Red Distribución WFI 90°C (derecha)
-  const retorno = { x: 310, y: 430, w: 340, h: 110 }; // Loop Retorno WFI (abajo centro)
+  // ── Bloques principales ──
+  const tank7   = { x: 40,  y: 120, w: 160, h: 110 };
+  const bc      = { x: 320, y: 80,  w: 320, h: 220 };
+  const distrib = { x: 760, y: 120, w: 170, h: 110 };
 
-  // Puntos de anclaje (lado caliente — agua WFI supply)
-  const tank7Out  = { x: tank7.x + tank7.w,   y: tank7.y + 50 };
-  const bcHotIn   = { x: bc.x,                y: bc.y + 60 };
-  const bcHotOut  = { x: bc.x + bc.w,         y: bc.y + 60 };
-  const distribIn = { x: distrib.x,           y: distrib.y + 50 };
+  // ── Puntos de anclaje (WFI caliente — nivel superior) ──
+  const tank7Out  = { x: tank7.x + tank7.w,   y: tank7.y + 55 };
+  const bcHotIn   = { x: bc.x,                y: bc.y + 55 };
+  const bcHotOut  = { x: bc.x + bc.w,         y: bc.y + 55 };
+  const distribIn = { x: distrib.x,           y: distrib.y + 55 };
 
-  // Puntos de anclaje (lado frío — agua WFI retorno)
-  const tank7BotIn  = { x: tank7.x + tank7.w,  y: tank7.y + 90 };
-  const bcColdOut   = { x: bc.x,               y: bc.y + bc.h - 60 };
-  const bcColdIn    = { x: bc.x + bc.w,        y: bc.y + bc.h - 60 };
-  const retornoOut  = { x: retorno.x + retorno.w, y: retorno.y + 50 };
+  // ── Puntos de anclaje (WFI frío — nivel inferior) ──
+  const tank7BotIn  = { x: tank7.x + tank7.w,  y: tank7.y + tank7.h - 25 };
+  const bcColdOut   = { x: bc.x,               y: bc.y + bc.h - 55 };
+  const bcColdIn    = { x: bc.x + bc.w,        y: bc.y + bc.h - 55 };
   const distribBot  = { x: distrib.x + distrib.w * 0.5, y: distrib.y + distrib.h };
 
   return (
     <div className="relative w-full overflow-x-auto">
       <svg
         viewBox={`0 0 ${W} ${H}`}
-        className="w-full min-w-[760px]"
+        className="w-full min-w-[800px]"
         onMouseMove={handleMouseMove}
       >
         <defs>
-          <linearGradient id="bcGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#3FB950" stopOpacity="0.12" />
-            <stop offset="100%" stopColor="#A371F7" stopOpacity="0.06" />
+          {/* Gradiente vertical BC: verde arriba → púrpura abajo */}
+          <linearGradient id="bcGradV" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#3FB950" stopOpacity="0.14" />
+            <stop offset="45%" stopColor="#3FB950" stopOpacity="0.06" />
+            <stop offset="55%" stopColor="#A371F7" stopOpacity="0.06" />
+            <stop offset="100%" stopColor="#A371F7" stopOpacity="0.14" />
           </linearGradient>
-          <linearGradient id="co2Grad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#F0883E" stopOpacity="0.20" />
-            <stop offset="100%" stopColor="#A371F7" stopOpacity="0.10" />
-          </linearGradient>
+
           <marker id="arrowR" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
             <path d="M0,0 L8,4 L0,8 L2,4 Z" fill="#F85149" />
           </marker>
@@ -112,12 +112,14 @@ export default function ProcessDiagram() {
           <marker id="arrowCO2" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
             <path d="M0,0 L7,3.5 L0,7 L1.5,3.5 Z" fill="#F0883E" opacity="0.7" />
           </marker>
+
           <style>{`
-            @keyframes flowDash { to { stroke-dashoffset: -24; } }
-            .flow-anim-red  { stroke-dasharray: 8 4; animation: flowDash 0.7s linear infinite; }
-            .flow-anim-blue { stroke-dasharray: 8 4; animation: flowDash 0.9s linear infinite; }
-            @keyframes co2Cycle { to { stroke-dashoffset: -20; } }
-            .co2-anim { stroke-dasharray: 6 3; animation: co2Cycle 0.5s linear infinite; }
+            @keyframes flowDashRed  { to { stroke-dashoffset: -24; } }
+            @keyframes flowDashBlue { to { stroke-dashoffset: -24; } }
+            @keyframes co2Cycle     { to { stroke-dashoffset: -20; } }
+            .flow-anim-red  { stroke-dasharray: 8 4; animation: flowDashRed  0.7s linear infinite; }
+            .flow-anim-blue { stroke-dasharray: 8 4; animation: flowDashBlue 0.9s linear infinite; }
+            .co2-anim       { stroke-dasharray: 6 3; animation: co2Cycle     0.5s linear infinite; }
           `}</style>
         </defs>
 
@@ -130,15 +132,15 @@ export default function ProcessDiagram() {
           strokeWidth="3.5"
           fill="none"
           markerEnd="url(#arrowR)"
-          opacity={hovered === "C1" ? 1 : 0.8}
+          opacity={hovered === "C1" ? 1 : 0.75}
           onMouseEnter={(e) => handleMouseEnter(e, formatStreamLabel(s1))}
           onMouseLeave={handleMouseLeave}
           className={`cursor-pointer transition-opacity ${hovered === "C1" ? "" : "flow-anim-red"}`}
         />
-        <SvgText x={(tank7Out.x + bcHotIn.x) / 2} y={tank7Out.y - 22} fill="#F85149">
+        <SvgText x={(tank7Out.x + bcHotIn.x) / 2} y={tank7Out.y - 18} fill="#F85149" fontSize={12}>
           C1 · {s1.T_C.toFixed(0)} °C
         </SvgText>
-        <SvgText x={(tank7Out.x + bcHotIn.x) / 2} y={tank7Out.y + 18} fill="#8B949E" fontWeight={400} fontSize={11}>
+        <SvgText x={(tank7Out.x + bcHotIn.x) / 2} y={tank7Out.y + 16} fill="#8B949E" fontWeight={400} fontSize={10}>
           {s1.volFlow.toFixed(1)} m³/h · {s1.massFlow.toFixed(0)} kg/h
         </SvgText>
 
@@ -151,36 +153,51 @@ export default function ProcessDiagram() {
           strokeWidth="3.5"
           fill="none"
           markerEnd="url(#arrowR)"
-          opacity={hovered === "C2" ? 1 : 0.8}
+          opacity={hovered === "C2" ? 1 : 0.75}
           onMouseEnter={(e) => handleMouseEnter(e, formatStreamLabel(s2))}
           onMouseLeave={handleMouseLeave}
           className={`cursor-pointer transition-opacity ${hovered === "C2" ? "" : "flow-anim-red"}`}
         />
-        <SvgText x={(bcHotOut.x + distribIn.x) / 2} y={bcHotOut.y - 22} fill="#F85149">
+        <SvgText x={(bcHotOut.x + distribIn.x) / 2} y={bcHotOut.y - 18} fill="#F85149" fontSize={12}>
           C2 · {s2.T_C.toFixed(0)} °C
         </SvgText>
-        <SvgText x={(bcHotOut.x + distribIn.x) / 2} y={bcHotOut.y + 18} fill="#8B949E" fontWeight={400} fontSize={11}>
+        <SvgText x={(bcHotOut.x + distribIn.x) / 2} y={bcHotOut.y + 16} fill="#8B949E" fontWeight={400} fontSize={10}>
           {s2.volFlow.toFixed(1)} m³/h · {s2.massFlow.toFixed(0)} kg/h
+        </SvgText>
+
+        {/* ═══════════════════════════════════════════════════
+            RETORNO: Distribución ↓ (línea vertical punteada)
+           ═══════════════════════════════════════════════════ */}
+        <path
+          d={`M${distribBot.x},${distribBot.y} L${distribBot.x},${distribBot.y + 55}`}
+          stroke="#79C0FF"
+          strokeWidth="2"
+          fill="none"
+          opacity={0.4}
+          strokeDasharray="5 3"
+        />
+        <SvgText x={distribBot.x + 10} y={distribBot.y + 28} fill="#8B949E" fontWeight={400} fontSize={10} textAnchor="start">
+          Retorno 65–70 °C
         </SvgText>
 
         {/* ═══════════════════════════════════════════════════
             CORRIENTE C3: Retorno → Evaporador (70°C)
            ═══════════════════════════════════════════════════ */}
         <path
-          d={`M${retornoOut.x},${retornoOut.y} L${bcColdIn.x + 8},${bcColdIn.y}`}
+          d={`M${distribBot.x},${distribBot.y + 55} L${bcColdIn.x + 8},${bcColdIn.y}`}
           stroke="#79C0FF"
-          strokeWidth="3.5"
+          strokeWidth="3"
           fill="none"
           markerEnd="url(#arrowB)"
-          opacity={hovered === "C3" ? 1 : 0.8}
+          opacity={hovered === "C3" ? 1 : 0.75}
           onMouseEnter={(e) => handleMouseEnter(e, formatStreamLabel(s3))}
           onMouseLeave={handleMouseLeave}
           className={`cursor-pointer transition-opacity ${hovered === "C3" ? "" : "flow-anim-blue"}`}
         />
-        <SvgText x={(retornoOut.x + bcColdIn.x) / 2} y={bcColdIn.y - 22} fill="#79C0FF">
+        <SvgText x={(distribBot.x + bcColdIn.x) / 2} y={bcColdIn.y + 18} fill="#79C0FF" fontSize={12}>
           C3 · {s3.T_C.toFixed(0)} °C
         </SvgText>
-        <SvgText x={(retornoOut.x + bcColdIn.x) / 2} y={bcColdIn.y + 18} fill="#8B949E" fontWeight={400} fontSize={11}>
+        <SvgText x={(distribBot.x + bcColdIn.x) / 2} y={bcColdIn.y - 14} fill="#8B949E" fontWeight={400} fontSize={10}>
           {s3.volFlow.toFixed(1)} m³/h · {s3.massFlow.toFixed(0)} kg/h
         </SvgText>
 
@@ -190,64 +207,54 @@ export default function ProcessDiagram() {
         <path
           d={`M${bcColdOut.x},${bcColdOut.y} L${tank7BotIn.x + 8},${tank7BotIn.y}`}
           stroke="#79C0FF"
-          strokeWidth="3.5"
+          strokeWidth="3"
           fill="none"
           markerEnd="url(#arrowB)"
-          opacity={hovered === "C4" ? 1 : 0.8}
+          opacity={hovered === "C4" ? 1 : 0.75}
           onMouseEnter={(e) => handleMouseEnter(e, formatStreamLabel(s4))}
           onMouseLeave={handleMouseLeave}
           className={`cursor-pointer transition-opacity ${hovered === "C4" ? "" : "flow-anim-blue"}`}
         />
-        <SvgText x={(bcColdOut.x + tank7BotIn.x) / 2} y={bcColdOut.y - 22} fill="#79C0FF">
+        <SvgText x={(bcColdOut.x + tank7BotIn.x) / 2} y={bcColdOut.y + 18} fill="#79C0FF" fontSize={12}>
           C4 · {s4.T_C.toFixed(0)} °C
         </SvgText>
-        <SvgText x={(bcColdOut.x + tank7BotIn.x) / 2} y={bcColdOut.y + 18} fill="#8B949E" fontWeight={400} fontSize={11}>
+        <SvgText x={(bcColdOut.x + tank7BotIn.x) / 2} y={bcColdOut.y - 14} fill="#8B949E" fontWeight={400} fontSize={10}>
           {s4.volFlow.toFixed(1)} m³/h · {s4.massFlow.toFixed(0)} kg/h
         </SvgText>
 
         {/* ═══════════════════════════════════════════════════
-            Línea retorno: Distribución → bloque Retorno (65-70°C)
+            CICLO CO₂ (interno BC) — óvalo vertical
            ═══════════════════════════════════════════════════ */}
-        <path
-          d={`M${distribBot.x},${distribBot.y} L${distribBot.x},${retorno.y + 50} L${retorno.x + retorno.w + 8},${retorno.y + 50}`}
-          stroke="#79C0FF"
-          strokeWidth="2"
+        <ellipse
+          cx={bc.x + bc.w / 2}
+          cy={bc.y + bc.h / 2}
+          rx={70}
+          ry={80}
           fill="none"
-          markerEnd="url(#arrowB)"
-          opacity={0.5}
-          strokeDasharray="6 3"
-        />
-        <SvgText x={distribBot.x + 30} y={(distribBot.y + retorno.y + 50) / 2} fill="#8B949E" fontWeight={400} fontSize={10} textAnchor="start">
-          Retorno 65-70°C
-        </SvgText>
-
-        {/* ═══════════════════════════════════════════════════
-            Ciclo CO₂ (interno BC) — representación esquemática
-           ═══════════════════════════════════════════════════ */}
-        {/* CO₂ del evaporador al compresor (curva interior) */}
-        <path
-          d={`M${bc.x + 80},${bc.y + bc.h - 30}
-              Q${bc.x + 170},${bc.y + bc.h + 20}
-              ${bc.x + bc.w / 2},${bc.y + bc.h / 2}
-              Q${bc.x + bc.w - 170},${bc.y - 20}
-              ${bc.x + bc.w - 80},${bc.y + 30}`}
           stroke="#F0883E"
           strokeWidth="1.5"
+          strokeDasharray="5 3"
+          opacity={0.5}
+          className="co2-anim"
+        />
+        {/* Flecha CO₂ sentido horario (arriba derecha) */}
+        <path
+          d={`M${bc.x + bc.w / 2 + 55},${bc.y + bc.h / 2 - 55}
+              Q${bc.x + bc.w / 2 + 75},${bc.y + bc.h / 2}
+              ${bc.x + bc.w / 2 + 55},${bc.y + bc.h / 2 + 55}`}
           fill="none"
+          stroke="#F0883E"
+          strokeWidth="1.5"
           opacity={0.45}
           className="co2-anim"
           markerEnd="url(#arrowCO2)"
         />
-        <path
-          d={`M${bc.x + bc.w - 80},${bc.y + 30}
-              Q${bc.x + bc.w / 2},${bc.y + 10}
-              ${bc.x + 80},${bc.y + 30}`}
-          stroke="#F0883E"
-          strokeWidth="1.5"
-          fill="none"
-          opacity={0.45}
-          className="co2-anim"
-        />
+        <SvgText x={bc.x + bc.w / 2} y={bc.y + bc.h / 2} fill="#F0883E" fontSize={10} opacity={0.7}>
+          CO₂
+        </SvgText>
+        <SvgText x={bc.x + bc.w / 2} y={bc.y + bc.h / 2 + 14} fill="#8B949E" fontSize={9} opacity={0.6}>
+          R744
+        </SvgText>
 
         {/* ═══════════════════════════════════════════════════
             BLOQUE: Tanque 7 WFI
@@ -260,18 +267,17 @@ export default function ProcessDiagram() {
           className="cursor-pointer"
         >
           <rect x={tank7.x} y={tank7.y} width={tank7.w} height={tank7.h} rx="10" fill="#161B22" stroke="#79C0FF" strokeWidth="1.5" />
-          {/* Símbolo tanque (elipse inferior) */}
-          <ellipse cx={tank7.x + tank7.w / 2} cy={tank7.y + tank7.h - 18} rx={50} ry={8} fill="#79C0FF" fillOpacity="0.08" stroke="#79C0FF" strokeWidth="1" opacity="0.5" />
-          <SvgText x={tank7.x + tank7.w / 2} y={tank7.y + 26} fill="#79C0FF" fontSize={13}>
+          <ellipse cx={tank7.x + tank7.w / 2} cy={tank7.y + tank7.h - 16} rx={48} ry={7} fill="#79C0FF" fillOpacity="0.08" stroke="#79C0FF" strokeWidth="1" opacity="0.5" />
+          <SvgText x={tank7.x + tank7.w / 2} y={tank7.y + 24} fill="#79C0FF" fontSize={13}>
             Tanque 7 (Exist.)
           </SvgText>
-          <SvgText x={tank7.x + tank7.w / 2} y={tank7.y + 50} fill="#E6EDF3" fontWeight={400} fontSize={11}>
+          <SvgText x={tank7.x + tank7.w / 2} y={tank7.y + 46} fill="#E6EDF3" fontWeight={400} fontSize={11}>
             WFI precalentada
           </SvgText>
-          <SvgText x={tank7.x + tank7.w / 2} y={tank7.y + 70} fill="#E6EDF3" fontWeight={700} fontSize={14}>
+          <SvgText x={tank7.x + tank7.w / 2} y={tank7.y + 66} fill="#E6EDF3" fontWeight={700} fontSize={15}>
             {params.T_c1.toFixed(0)} °C
           </SvgText>
-          <SvgText x={tank7.x + tank7.w / 2} y={tank7.y + 92} fill="#8B949E" fontWeight={400} fontSize={10}>
+          <SvgText x={tank7.x + tank7.w / 2} y={tank7.y + 86} fill="#8B949E" fontWeight={400} fontSize={10}>
             10 m³ · AISI 316L
           </SvgText>
         </g>
@@ -288,56 +294,62 @@ export default function ProcessDiagram() {
           onMouseLeave={handleMouseLeave}
           className="cursor-pointer"
         >
-          <rect x={bc.x} y={bc.y} width={bc.w} height={bc.h} rx="12" fill="url(#bcGrad)" stroke="#3FB950" strokeWidth="2" />
-          {/* Divisor interno Gas Cooler / Evaporador */}
-          <line x1={bc.x + 20} y1={bc.y + bc.h / 2} x2={bc.x + bc.w - 20} y2={bc.y + bc.h / 2}
-            stroke="#3FB950" strokeWidth="0.8" strokeDasharray="4 3" opacity="0.4" />
+          {/* Fondo gradiente vertical */}
+          <rect x={bc.x} y={bc.y} width={bc.w} height={bc.h} rx="12" fill="url(#bcGradV)" stroke="#3FB950" strokeWidth="1.5" />
 
-          {/* Encabezado */}
-          <SvgText x={bc.x + bc.w / 2} y={bc.y + 22} fill="#3FB950" fontSize={14}>
+          {/* Divisor horizontal punteado */}
+          <line x1={bc.x + 16} y1={bc.y + bc.h / 2} x2={bc.x + bc.w - 16} y2={bc.y + bc.h / 2}
+            stroke="#8B949E" strokeWidth="0.8" strokeDasharray="4 3" opacity="0.35" />
+
+          {/* Título general */}
+          <SvgText x={bc.x + bc.w / 2} y={bc.y + 20} fill="#3FB950" fontSize={14}>
             Bomba de Calor CO₂ Transcrítica
           </SvgText>
 
-          {/* Sub-bloque Gas Cooler (mitad superior) */}
-          <SvgText x={bc.x + bc.w / 2} y={bc.y + 46} fill="#F85149" fontWeight={700} fontSize={11}>
-            Gas Cooler SWEP B649 · 95-97 bar
+          {/* ── Gas Cooler (mitad superior) ── */}
+          <SvgText x={bc.x + bc.w / 2} y={bc.y + 42} fill="#F85149" fontWeight={700} fontSize={11}>
+            Gas Cooler SWEP B649 · 95–97 bar
           </SvgText>
-          <SvgText x={bc.x + bc.w / 2} y={bc.y + 64} fill="#8B949E" fontWeight={400} fontSize={10}>
-            CO₂ 115°C → 35°C  ·  H₂O 75°C → 90°C
+          <SvgText x={bc.x + bc.w / 2} y={bc.y + 58} fill="#8B949E" fontWeight={400} fontSize={10}>
+            CO₂ 115 °C → 35 °C · H₂O 75 °C → 90 °C
           </SvgText>
 
-          {/* Badges de potencia (interior) */}
-          <g transform={`translate(${bc.x + bc.w / 2 - 70}, ${bc.y + bc.h / 2 - 18})`}>
-            <rect x="0" y="0" width="60" height="22" rx="5" fill="#3FB950" fillOpacity="0.15" stroke="#3FB950" strokeWidth="1" />
-            <SvgText x={30} y={11} fill="#3FB950" fontSize={11}>
-              ▲{result.Q_cond_kw.toFixed(0)} kW
-            </SvgText>
-          </g>
-          <g transform={`translate(${bc.x + bc.w / 2 + 10}, ${bc.y + bc.h / 2 - 18})`}>
-            <rect x="0" y="0" width="60" height="22" rx="5" fill="#F0883E" fillOpacity="0.15" stroke="#F0883E" strokeWidth="1" />
-            <SvgText x={30} y={11} fill="#F0883E" fontSize={11}>
-              ⚡{result.W_comp_kw.toFixed(0)} kW
+          {/* Badge Q_cond */}
+          <g transform={`translate(${bc.x + bc.w / 2 - 60}, ${bc.y + bc.h / 2 - 22})`}>
+            <rect x="0" y="0" width={result.Q_cond_kw >= 100 ? 72 : 60} height="20" rx="5" fill="#3FB950" fillOpacity="0.15" stroke="#3FB950" strokeWidth="1" />
+            <SvgText x={(result.Q_cond_kw >= 100 ? 72 : 60) / 2} y={10} fill="#3FB950" fontSize={10}>
+              ▲ {result.Q_cond_kw.toFixed(0)} kW
             </SvgText>
           </g>
 
-          {/* Sub-bloque Evaporador (mitad inferior) */}
-          <SvgText x={bc.x + bc.w / 2} y={bc.y + bc.h / 2 + 24} fill="#79C0FF" fontWeight={700} fontSize={11}>
+          {/* ── Evaporador (mitad inferior) ── */}
+          <SvgText x={bc.x + bc.w / 2} y={bc.y + bc.h / 2 + 22} fill="#79C0FF" fontWeight={700} fontSize={11}>
             Evaporador SWEP B649 · 57,8 bar
           </SvgText>
-          <SvgText x={bc.x + bc.w / 2} y={bc.y + bc.h / 2 + 42} fill="#8B949E" fontWeight={400} fontSize={10}>
-            CO₂ evap. ≈ 22°C (bifásico) · H₂O retorno 70°C
+          <SvgText x={bc.x + bc.w / 2} y={bc.y + bc.h / 2 + 38} fill="#8B949E" fontWeight={400} fontSize={10}>
+            CO₂ evap. ≈ 22 °C (bifásico) · H₂O retorno 70 °C
           </SvgText>
 
-          {/* COP */}
-          <g transform={`translate(${bc.x + bc.w - 82}, ${bc.y + bc.h - 28})`}>
-            <rect x="0" y="0" width="72" height="20" rx="5" fill="#A371F7" fillOpacity="0.15" stroke="#A371F7" strokeWidth="1" />
-            <SvgText x={36} y={10} fill="#A371F7" fontSize={10}>
+          {/* Badge Q_evap */}
+          <g transform={`translate(${bc.x + bc.w / 2 - 60}, ${bc.y + bc.h / 2 + 48})`}>
+            <rect x="0" y="0" width={result.Q_evap_kw >= 100 ? 72 : 60} height="20" rx="5" fill="#A371F7" fillOpacity="0.15" stroke="#A371F7" strokeWidth="1" />
+            <SvgText x={(result.Q_evap_kw >= 100 ? 72 : 60) / 2} y={10} fill="#A371F7" fontSize={10}>
+              ▼ {result.Q_evap_kw.toFixed(0)} kW
+            </SvgText>
+          </g>
+
+          {/* Badge COP */}
+          <g transform={`translate(${bc.x + bc.w - 78}, ${bc.y + bc.h - 26})`}>
+            <rect x="0" y="0" width="70" height="18" rx="5" fill="#A371F7" fillOpacity="0.15" stroke="#A371F7" strokeWidth="1" />
+            <SvgText x={35} y={9} fill="#A371F7" fontSize={10}>
               COP {params.copOperativo}
             </SvgText>
           </g>
-          <g transform={`translate(${bc.x + 10}, ${bc.y + bc.h - 28})`}>
-            <rect x="0" y="0" width="86" height="20" rx="5" fill="#A371F7" fillOpacity="0.08" stroke="#A371F7" strokeWidth="0.8" />
-            <SvgText x={43} y={10} fill="#8B949E" fontSize={10}>
+
+          {/* Badge refrigerante */}
+          <g transform={`translate(${bc.x + 10}, ${bc.y + bc.h - 26})`}>
+            <rect x="0" y="0" width="50" height="18" rx="5" fill="#F0883E" fillOpacity="0.12" stroke="#F0883E" strokeWidth="0.8" />
+            <SvgText x={25} y={9} fill="#F0883E" fontSize={10}>
               {refrigerant}
             </SvgText>
           </g>
@@ -348,115 +360,48 @@ export default function ProcessDiagram() {
            ═══════════════════════════════════════════════════ */}
         <g
           onMouseEnter={(e) => handleMouseEnter(e,
-            `Red Distribución WFI 90°C\nBomba P-02 (existente)\n16-28 m³/h según escenario\nSanitización: 17 sistemas críticos\nTemp. mínima USP <1231>: 85°C`
+            `Red Distribución WFI 90 °C\nBomba P-02 (existente)\n16–28 m³/h según escenario\nSanitización: 17 sistemas críticos\nTemp. mínima USP ‹1231›: 85 °C`
           )}
           onMouseLeave={handleMouseLeave}
           className="cursor-pointer"
         >
           <rect x={distrib.x} y={distrib.y} width={distrib.w} height={distrib.h} rx="10" fill="#161B22" stroke="#F85149" strokeWidth="1.5" />
-          <SvgText x={distrib.x + distrib.w / 2} y={distrib.y + 26} fill="#F85149" fontSize={12}>
+          <SvgText x={distrib.x + distrib.w / 2} y={distrib.y + 24} fill="#F85149" fontSize={12}>
             Distribución WFI
           </SvgText>
-          <SvgText x={distrib.x + distrib.w / 2} y={distrib.y + 50} fill="#E6EDF3" fontWeight={700} fontSize={15}>
+          <SvgText x={distrib.x + distrib.w / 2} y={distrib.y + 48} fill="#E6EDF3" fontWeight={700} fontSize={15}>
             {params.T_c2.toFixed(0)} °C
           </SvgText>
-          <SvgText x={distrib.x + distrib.w / 2} y={distrib.y + 72} fill="#8B949E" fontWeight={400} fontSize={10}>
+          <SvgText x={distrib.x + distrib.w / 2} y={distrib.y + 70} fill="#8B949E" fontWeight={400} fontSize={10}>
             17 sistemas · 28 m³/h
           </SvgText>
-          <SvgText x={distrib.x + distrib.w / 2} y={distrib.y + 92} fill="#8B949E" fontWeight={400} fontSize={10}>
+          <SvgText x={distrib.x + distrib.w / 2} y={distrib.y + 88} fill="#8B949E" fontWeight={400} fontSize={10}>
             cGMP · USP ‹1231›
           </SvgText>
         </g>
 
         {/* ═══════════════════════════════════════════════════
-            BLOQUE: Loop Retorno WFI
+            BADGES Q_cond / Q_evap (exteriores al bloque BC)
            ═══════════════════════════════════════════════════ */}
-        <g
-          onMouseEnter={(e) => handleMouseEnter(e,
-            `Loop Retorno WFI\nRetorno desde sistemas de sanitización\nTemperatura retorno: 65-70°C\nFuente calor evaporador CO₂\nSalida evaporador (C4): ${s4.T_C.toFixed(0)} °C → Tanque 7`
-          )}
-          onMouseLeave={handleMouseLeave}
-          className="cursor-pointer"
-        >
-          <rect x={retorno.x} y={retorno.y} width={retorno.w} height={retorno.h} rx="10" fill="#161B22" stroke="#A371F7" strokeWidth="1.5" />
-          <SvgText x={retorno.x + retorno.w / 2} y={retorno.y + 26} fill="#A371F7" fontSize={13}>
-            Loop Retorno WFI
-          </SvgText>
-          <SvgText x={retorno.x + retorno.w / 2} y={retorno.y + 50} fill="#E6EDF3" fontWeight={400} fontSize={12}>
-            65-70°C → Evaporador CO₂
-          </SvgText>
-          <SvgText x={retorno.x + retorno.w / 2} y={retorno.y + 74} fill="#8B949E" fontWeight={400} fontSize={11}>
-            Q_evap = {result.Q_evap_kw.toFixed(0)} kW · {result.TR_evap.toFixed(1)} TR
-          </SvgText>
-          {/* Badge Q_evap */}
-          <g transform={`translate(${retorno.x + retorno.w / 2}, ${retorno.y + retorno.h - 10})`}>
-            <rect x="-52" y="-10" width="104" height="20" rx="8" fill="#A371F7" fillOpacity="0.15" stroke="#A371F7" strokeWidth="1" />
-            <SvgText x={0} y={0} fill="#A371F7" fontSize={10}>
-              ▼{result.Q_evap_kw.toFixed(0)} kW absorbidos CO₂
-            </SvgText>
-          </g>
-        </g>
-
-        {/* ═══════════════════════════════════════════════════
-            CAJA DE CONDICIONES DE DISEÑO (esquina superior izquierda)
-           ═══════════════════════════════════════════════════ */}
-        <g transform="translate(30, 250)">
-          <rect x="0" y="0" width="180" height="100" rx="8"
-            fill="#161B22" stroke="#8B949E" strokeWidth="0.8" opacity="0.9" />
-          <SvgText x={90} y={16} fill="#8B949E" fontSize={10} fontWeight={700}>
-            Condiciones de Diseño
-          </SvgText>
-          <SvgText x={10} y={34} fill="#8B949E" fontSize={9} fontWeight={400} textAnchor="start">
-            Escenario: Simultaneidad 2
-          </SvgText>
-          <SvgText x={10} y={50} fill="#8B949E" fontSize={9} fontWeight={400} textAnchor="start">
-            Caudal: {s1.volFlow.toFixed(1)} m³/h · ΔT: {(params.T_c2 - params.T_c1).toFixed(0)} K
-          </SvgText>
-          <SvgText x={10} y={66} fill="#8B949E" fontSize={9} fontWeight={400} textAnchor="start">
-            Altitud: {params.altitud_msnm} msnm · P_atm: {result.P_atm_bar.toFixed(3)} bar
-          </SvgText>
-          <SvgText x={10} y={82} fill="#8B949E" fontSize={9} fontWeight={400} textAnchor="start">
-            Energía cierre: {result.energyClosurePct.toFixed(4)} %
-          </SvgText>
-        </g>
-
-        {/* ═══════════════════════════════════════════════════
-            FLUJOS DE ENERGÍA badge Q_cond arriba del BC
-           ═══════════════════════════════════════════════════ */}
-        <g transform={`translate(${bc.x + bc.w / 2}, ${bc.y - 22})`}>
-          <rect x="-65" y="-14" width="130" height="26" rx="6" fill="#3FB950" fillOpacity="0.12" stroke="#3FB950" strokeWidth="1" />
-          <SvgText x={0} y={0} fill="#3FB950" fontSize={12}>
+        <g transform={`translate(${bc.x + bc.w / 2}, ${bc.y - 24})`}>
+          <rect x="-60" y="-12" width="120" height="22" rx="6" fill="#3FB950" fillOpacity="0.12" stroke="#3FB950" strokeWidth="1" />
+          <SvgText x={0} y={0} fill="#3FB950" fontSize={11}>
             Q_cond = {result.Q_cond_kw.toFixed(0)} kW
           </SvgText>
         </g>
-
-        {/* Q_evap badge abajo del BC */}
-        <g transform={`translate(${bc.x + bc.w / 2}, ${bc.y + bc.h + 26})`}>
-          <rect x="-65" y="-14" width="130" height="26" rx="6" fill="#A371F7" fillOpacity="0.12" stroke="#A371F7" strokeWidth="1" />
-          <SvgText x={0} y={0} fill="#A371F7" fontSize={12}>
+        <g transform={`translate(${bc.x + bc.w / 2}, ${bc.y + bc.h + 24})`}>
+          <rect x="-60" y="-12" width="120" height="22" rx="6" fill="#A371F7" fillOpacity="0.12" stroke="#A371F7" strokeWidth="1" />
+          <SvgText x={0} y={0} fill="#A371F7" fontSize={11}>
             Q_evap = {result.Q_evap_kw.toFixed(0)} kW
           </SvgText>
         </g>
 
         {/* ═══════════════════════════════════════════════════
-            LEYENDA
+            SUBTÍTULO DE CONDICIONES (debajo del diagrama, centrado)
            ═══════════════════════════════════════════════════ */}
-        <g transform="translate(30, 610)">
-          <rect x="0" y="-1" width="12" height="12" rx="2" fill="#F85149" opacity="0.7" />
-          <SvgText x={18} y={5} fill="#8B949E" fontWeight={400} fontSize={11} textAnchor="start">
-            WFI suministro (gas cooler)
-          </SvgText>
-          <rect x={220} y="-1" width="12" height="12" rx="2" fill="#79C0FF" opacity="0.7" />
-          <SvgText x={238} y={5} fill="#8B949E" fontWeight={400} fontSize={11} textAnchor="start">
-            WFI retorno (evaporador)
-          </SvgText>
-          <rect x={450} y="-1" width="12" height="12" rx="2" fill="#F0883E" opacity="0.7" />
-          <SvgText x={468} y={5} fill="#8B949E" fontWeight={400} fontSize={11} textAnchor="start">
-            Ciclo CO₂ transcrítico
-          </SvgText>
-          <rect x={670} y="-1" width="12" height="12" rx="2" fill="#A371F7" opacity="0.7" />
-          <SvgText x={688} y={5} fill="#8B949E" fontWeight={400} fontSize={11} textAnchor="start">
-            Q_evap absorbido
+        <g transform={`translate(${W / 2}, ${H - 28})`}>
+          <SvgText x={0} y={0} fill="#8B949E" fontWeight={400} fontSize={10}>
+            Escenario Simultaneidad 2 · Caudal {s1.volFlow.toFixed(1)} m³/h · ΔT {(params.T_c2 - params.T_c1).toFixed(0)} K · Altitud {params.altitud_msnm} msnm · P_atm {result.P_atm_bar.toFixed(3)} bar · Cierre energía {result.energyClosurePct.toFixed(4)} %
           </SvgText>
         </g>
       </svg>
